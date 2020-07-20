@@ -72,6 +72,15 @@ Instance assignmentD_models_guard : Models (assignment * D) guard :=
       match theta_d with
       | (theta, d) => forall i, theta i = d <-> b i
       end }.
+Instance two_assignments_model_rel : Models (assignment * assignment) Rel :=
+  { models pair phi :=
+      match pair with
+      | (theta, theta') =>
+          forall i j, (theta  i = theta  j <-> phi (X  i) (X  j)) /\
+                      (theta' i = theta' j <-> phi (X' i) (X' j)) /\
+                      (theta  i = theta' j <-> phi (X  i) (X' j)) /\
+                      (theta' i = theta  j <-> phi (X' i) (X  j))
+      end }.
 
 (* lemmas *)
 
@@ -520,5 +529,72 @@ Proof.
 Qed.
 
 End AfterRWellDefined.
+
+Section AfterRExists.
+
+Variable  d : D.
+Variables theta theta' : assignment.
+Variables phi phi' : Rel.
+Hypothesis phi_equiv  : is_equiv_rel phi.
+Hypothesis phi'_equiv : is_equiv_rel phi'.
+
+Lemma afterR_exists_core :
+  (theta, d) |= b ->
+    forall j l, (theta' j = theta l /\ b l -> theta' j = d) /\
+                ( ~ (theta' j = theta l <-> b l) -> theta' j <> d).
+Proof.
+  intros theta_d_b.
+  intros j l.
+  split.
+  - intros [theta_jl bl].
+    rewrite theta_jl.
+    apply theta_d_b.
+    assumption.
+  - intros thjl_neq_bl th'j_d.
+    apply thjl_neq_bl.
+    split; intros H.
+    + apply theta_d_b.
+      rewrite <- H. assumption.
+    + rewrite th'j_d.
+      apply theta_d_b in H.
+      auto.
+Qed.
+
+Lemma afterR_exists :
+  forall i : nat,
+    (theta', theta) |= phi ->
+    (theta', update theta i d) |= phi' ->
+    (theta, d) |= b ->
+      forall j l, (phi (X j) (X' l) /\ b l -> phi' (X j) (X' i)) /\
+                  ( ~ (phi (X j) (X' l) <-> b l) -> ~ phi' (X j) (X' i)).
+Proof.
+  intros i.
+  intros theta_phi theta_phi' theta_d_b.
+  intros j l.
+  split.
+  - intros [pjl bl].
+    apply theta_phi'.
+    apply theta_phi in pjl.
+    unfold update.
+    rewrite <- beq_nat_refl.
+    rewrite pjl.
+    apply theta_d_b. assumption.
+  - intros pjl_neq_bl p'ji.
+    apply pjl_neq_bl.
+    apply theta_phi' in p'ji.
+    unfold update in p'ji.
+    rewrite <- beq_nat_refl in p'ji.
+    split; intros H.
+    + apply theta_d_b.
+      apply theta_phi in H.
+      rewrite <- H.
+      assumption.
+    + apply theta_phi.
+      apply theta_d_b in H.
+      rewrite H.
+      assumption.
+Qed.
+
+End AfterRExists.
 
 End EquivRel.
