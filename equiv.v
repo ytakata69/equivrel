@@ -56,6 +56,14 @@ Definition after (gamma : Rel) (b : guard) (i : nat) : Rel :=
     | x, y => x = y
     end.
 
+Definition afterR (phi : Rel) (b : guard) (i : nat) : Rel -> Prop :=
+  fun phi' : Rel =>
+    former phi' = former phi /\
+    lat phi' = after (lat phi) b i /\
+    (forall j l, (phi (X j) (X' l) /\ b l -> phi' (X j) (X' i)) /\
+              (~ (phi (X j) (X' l) <-> b l) -> ~ phi' (X j) (X' i))) /\
+    forall j l, l <> i -> (phi (X j) (X' l) <-> phi' (X j) (X' l)).
+
 Definition afterL (phi : Rel) (i : nat) : Rel :=
   fun xl xj : register =>
     match xl, xj with
@@ -507,7 +515,7 @@ Variables phi phi' : Rel.
 Hypothesis phi_equiv  : is_equiv_rel phi.
 Hypothesis phi'_equiv : is_equiv_rel phi'.
 
-Lemma afterR_exists_core :
+Lemma afterR_exists_core' :
   (theta, d) |= b ->
     forall j l, (theta' j = theta l /\ b l -> theta' j = d) /\
                 ( ~ (theta' j = theta l <-> b l) -> theta' j <> d).
@@ -529,7 +537,7 @@ Proof.
       auto.
 Qed.
 
-Lemma afterR_exists :
+Lemma afterR_exists_core :
   forall i : nat,
     (theta', theta) |= phi ->
     (theta', update theta i d) |= phi' ->
@@ -562,6 +570,108 @@ Proof.
       apply theta_d_b in H.
       rewrite H.
       assumption.
+Qed.
+
+Lemma afterR_exists :
+  forall i : nat,
+    (theta', theta) |= phi ->
+    (theta', update theta i d) |= phi' ->
+    (theta, d) |= b ->
+      afterR phi b i phi'.
+Proof.
+  intros i theta_phi theta_phi' theta_d_b.
+  unfold afterR.
+  split. (* many cases *)
+  { (* former phi' = former phi *)
+    apply rel_extensionality.
+    intros x y.
+    split; intros H.
+    - (* -> *)
+      case x, y.
+      { apply theta_phi.
+        apply theta_phi' in H.
+        assumption. }
+      { discriminate. }
+      { discriminate. }
+      { assumption. }
+    - (* <- *)
+      case x, y.
+      { apply theta_phi'.
+        apply theta_phi in H.
+        assumption. }
+      { discriminate. }
+      { discriminate. }
+      { assumption. }
+  }
+  split.
+  { (* lat phi' = after (lat phi) b i *)
+    apply rel_extensionality.
+    intros x y.
+    split; intros H.
+    - (* -> *)
+      case x, y.
+      { unfold after.
+        unfold lat in H.
+        apply theta_phi' in H.
+        unfold update in H.
+        case_eq (i0 =? i); intros i0i.
+        - rewrite i0i in H.
+          case_eq (i1 =? i); intros i1i.
+          + right. apply beq_nat_true. assumption.
+          + rewrite i1i in H.
+            symmetry in H.
+            apply theta_d_b in H. auto.
+        - rewrite i0i in H.
+          case_eq (i1 =? i); intros i1i.
+          + rewrite i1i in H.
+            apply theta_d_b in H. assumption.
+          + rewrite i1i in H.
+            unfold lat.
+            apply theta_phi. assumption. }
+      { discriminate. }
+      { discriminate. }
+      { assumption. }
+    - (* <- *)
+      case x, y.
+      { unfold lat.
+        apply theta_phi'.
+        unfold update.
+        unfold after in H.
+        case_eq (i0 =? i); intros i0i.
+        - rewrite i0i in H.
+          case_eq (i1 =? i); intros i1i.
+          + reflexivity.
+          + destruct H as [H | H].
+            * symmetry. apply theta_d_b. assumption.
+            * apply beq_nat_false in i1i. contradiction.
+        - rewrite i0i in H.
+          case_eq (i1 =? i); intros i1i.
+          + rewrite i1i in H.
+            apply theta_d_b in H. assumption.
+          + rewrite i1i in H.
+            unfold lat in H.
+            apply theta_phi in H. assumption. }
+      { discriminate. }
+      { discriminate. }
+      { assumption. }
+  }
+  split.
+  { apply (afterR_exists_core _ theta_phi theta_phi' theta_d_b). }
+  { intros j l nli.
+    split; intros H.
+    - apply theta_phi'.
+      apply theta_phi in H.
+      unfold update.
+      case_eq (l =? i); intros li.
+      + apply beq_nat_true in li. contradiction.
+      + assumption.
+    - apply theta_phi.
+      apply theta_phi' in H.
+      unfold update in H.
+      case_eq (l =? i); intros li.
+      + apply beq_nat_true in li. contradiction.
+      + rewrite li in H. assumption.
+  }
 Qed.
 
 End AfterRExists.
