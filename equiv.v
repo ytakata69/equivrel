@@ -1,6 +1,6 @@
 (* sketch on equivalence relation *)
 
-Require Import Bool Arith.
+Require Import Nat Arith.EqNat.
 
 Section EquivRel.
 
@@ -95,7 +95,7 @@ Proof.
     destruct Hi0 as [Hi0 | Hi0].
     + (* Hi: (i0 =? i) = true *)
       unfold after. rewrite Hi0.
-      right. apply Nat.eqb_eq. assumption.
+      right. apply beq_nat_true. assumption.
     + (* Hi: (i0 =? i) = false *)
       unfold after.
       rewrite Hi0.
@@ -121,7 +121,7 @@ Proof.
         case (i0 =? i). auto. auto.
       destruct Hi0 as [Hi0 | Hi0].
       * (* Hi0: (i0 =? i) = true *)
-        right. apply Nat.eqb_eq. assumption.
+        right. apply beq_nat_true. assumption.
       * (* Hi0: (i0 =? i) = false *)
         unfold after in Ha.
         rewrite Hi0 in Ha.
@@ -139,7 +139,7 @@ Proof.
         rewrite Hi0 in Ha.
         destruct Ha as [Ha | Ha].
           assumption.
-        apply Nat.eqb_neq in Hi1.
+        apply beq_nat_false in Hi1.
         apply Hi1 in Ha. case Ha.
       * (* Hi0: (i0 =? i) = false *)
         rewrite Hi0.
@@ -158,9 +158,9 @@ Proof.
       case (i0 =? i1). auto. auto.
     destruct Hi as [Hi | Hi].
     + (* Hi: (i0 =? i1) = true *)
-      apply Nat.eqb_eq in Hi. rewrite Hi. reflexivity.
+      apply beq_nat_true in Hi. rewrite Hi. reflexivity.
     + (* Hi: (i0 =? i1) = false *)
-      apply Nat.eqb_neq in Hi. auto.
+      apply beq_nat_false in Hi. auto.
 Qed.
 
 Lemma after_is_transitive :
@@ -181,7 +181,7 @@ Proof.
         case (i2 =? i). auto. auto.
       destruct Hi2 as [Hi2 | Hi2].
       * (* Hi2: (i2 =? i) = true *)
-        right. apply Nat.eqb_eq. assumption.
+        right. apply beq_nat_true. assumption.
       * (* Hi2: (i2 =? i) = false *)
         assert (Hi1: (i1 =? i) = true \/ (i1 =? i) = false).
           case (i1 =? i). auto. auto.
@@ -199,7 +199,7 @@ Proof.
           apply gamma_b in Hayz.
             left. assumption.
           assumption.
-        apply Nat.eqb_neq in Hi1.
+        apply beq_nat_false in Hi1.
         apply Hi1 in Hi1'. case Hi1'.
     + (* Hi0: (i0 =? i) = false *)
       unfold after.
@@ -238,7 +238,7 @@ Proof.
           rewrite Hi1 in Hayz.
           destruct Hayz as [bi2 | Hi2'].
             assumption.
-          apply Nat.eqb_neq in Hi2.
+          apply beq_nat_false in Hi2.
           apply Hi2 in Hi2'. case Hi2'.
         rewrite Hi1 in Haxy.
         unfold after in Hayz.
@@ -364,7 +364,7 @@ Proof.
         case (j =? i). auto. auto.
       destruct Hj as [Hj | Hj].
       * (* Hj: (j =? i) = true *)
-        rewrite Nat.eqb_eq in Hj. auto.
+        apply beq_nat_true in Hj. auto.
       * (* Hj: (j =? i) = false *)
         left. apply theta_d_b.
         rewrite Hj in H.
@@ -398,7 +398,7 @@ Proof.
         rewrite bj.
         case (j =? i). reflexivity. reflexivity.
       rewrite ji.
-      rewrite Nat.eqb_refl.
+      rewrite <- beq_nat_refl.
       reflexivity.
     + (* Hi0: (i0 =? i) = false *)
       rewrite Hi0.
