@@ -120,15 +120,11 @@ Proof.
   intros x.
   case x; intros i0.
   - (* x = (X i0) *)
-    assert (Hi0: (i0 =? i) = true \/ (i0 =? i) = false).
-      case (i0 =? i). auto. auto.
-    destruct Hi0 as [Hi0 | Hi0].
+    unfold after.
+    case_eq (i0 =? i); intros Hi0.
     + (* Hi: (i0 =? i) = true *)
-      unfold after. rewrite Hi0.
       right. apply beq_nat_true. assumption.
     + (* Hi: (i0 =? i) = false *)
-      unfold after.
-      rewrite Hi0.
       destruct gamma_equiv as [gref _].
       apply gref.
   - (* x = (X' i0) *)
@@ -142,14 +138,10 @@ Proof.
   intros x y Ha.
   case x, y.
   - (* x = (X i0), y = (X i1) *)
-    assert (Hi1: (i1 =? i) = true \/ (i1 =? i) = false).
-      case (i1 =? i). auto. auto.
-    destruct Hi1 as [Hi1 | Hi1].
+    unfold after.
+    case_eq (i1 =? i); intros Hi1.
     + (* Hi1: (i1 =? i) = true *)
-      unfold after. rewrite Hi1.
-      assert (Hi0: (i0 =? i) = true \/ (i0 =? i) = false).
-        case (i0 =? i). auto. auto.
-      destruct Hi0 as [Hi0 | Hi0].
+      case_eq (i0 =? i); intros Hi0.
       * (* Hi0: (i0 =? i) = true *)
         right. apply beq_nat_true. assumption.
       * (* Hi0: (i0 =? i) = false *)
@@ -158,22 +150,15 @@ Proof.
         rewrite Hi1 in Ha.
         auto.
     + (* Hi1: (i1 =? i) = false *)
-      unfold after.
-      rewrite Hi1.
-      assert (Hi0: (i0 =? i) = true \/ (i0 =? i) = false).
-        case (i0 =? i). auto. auto.
-      destruct Hi0 as [Hi0 | Hi0].
+      unfold after in Ha.
+      case_eq (i0 =? i); intros Hi0.
       * (* Hi0: (i0 =? i) = true *)
-        rewrite Hi0.
-        unfold after in Ha.
         rewrite Hi0 in Ha.
         destruct Ha as [Ha | Ha].
           assumption.
         apply beq_nat_false in Hi1.
-        apply Hi1 in Ha. contradiction.
+        contradiction.
       * (* Hi0: (i0 =? i) = false *)
-        rewrite Hi0.
-        unfold after in Ha.
         rewrite Hi0 in Ha.
         rewrite Hi1 in Ha.
         destruct gamma_equiv as [_ [gsym _]].
@@ -184,9 +169,7 @@ Proof.
     unfold after. auto.
   - (* x = (X' i0), y = (X' i1) *)
     unfold after.
-    assert (Hi: (i0 =? i1) = true \/ (i0 =? i1) = false).
-      case (i0 =? i1). auto. auto.
-    destruct Hi as [Hi | Hi].
+    case_eq (i0 =? i1); intros Hi.
     + (* Hi: (i0 =? i1) = true *)
       apply beq_nat_true in Hi. rewrite Hi. reflexivity.
     + (* Hi: (i0 =? i1) = false *)
@@ -201,21 +184,14 @@ Proof.
   intros x y z [Haxy Hayz].
   case x, y, z.
   - (* x = (X i0), y = (X i1), z = (X i2) *)
-    assert (Hi0: (i0 =? i) = true \/ (i0 =? i) = false).
-      case (i0 =? i). auto. auto.
-    destruct Hi0 as [Hi0 | Hi0].
+    unfold after.
+    case_eq (i0 =? i); intros Hi0.
     + (* Hi0: (i0 =? i) = true *)
-      unfold after.
-      rewrite Hi0.
-      assert (Hi2: (i2 =? i) = true \/ (i2 =? i) = false).
-        case (i2 =? i). auto. auto.
-      destruct Hi2 as [Hi2 | Hi2].
+      case_eq (i2 =? i); intros Hi2.
       * (* Hi2: (i2 =? i) = true *)
         right. apply beq_nat_true. assumption.
       * (* Hi2: (i2 =? i) = false *)
-        assert (Hi1: (i1 =? i) = true \/ (i1 =? i) = false).
-          case (i1 =? i). auto. auto.
-        destruct Hi1 as [Hi1 | Hi1].
+        case_eq (i1 =? i); intros Hi1.
           unfold after in Hayz.
           rewrite Hi1 in Hayz.
           assumption.
@@ -230,37 +206,27 @@ Proof.
             left. assumption.
           assumption.
         apply beq_nat_false in Hi1.
-        apply Hi1 in Hi1'. contradiction.
+        contradiction.
     + (* Hi0: (i0 =? i) = false *)
-      unfold after.
-      rewrite Hi0.
-      assert (Hi2: (i2 =? i) = true \/ (i2 =? i) = false).
-        case (i2 =? i). auto. auto.
-      destruct Hi2 as [Hi2 | Hi2].
+      case_eq (i2 =? i); intros Hi2.
       * (* Hi2: (i2 =? i) = true *)
-        rewrite Hi2.
         unfold after in Haxy.
         rewrite Hi0 in Haxy.
-        assert (Hi1: (i1 =? i) = true \/ (i1 =? i) = false).
-          case (i1 =? i). auto. auto.
-        destruct Hi1 as [Hi1 | Hi1].
+        case_eq (i1 =? i); intros Hi1.
           rewrite Hi1 in Haxy. assumption.
         unfold after in Hayz.
         rewrite Hi1 in Haxy.
         rewrite Hi1 in Hayz.
         rewrite Hi2 in Hayz.
         apply gamma_b in Hayz.
+        apply Hayz.
         destruct gamma_equiv as [_ [gsym _]].
         apply gsym in Haxy.
-        apply Hayz in Haxy.
         assumption.
       * (* Hi2: (i2 =? i) = false *)
-        rewrite Hi2.
         unfold after in Haxy.
         rewrite Hi0 in Haxy.
-        assert (Hi1: (i1 =? i) = true \/ (i1 =? i) = false).
-          case (i1 =? i). auto. auto.
-        destruct Hi1 as [Hi1 | Hi1].
+        case_eq (i1 =? i); intros Hi1.
           rewrite Hi1 in Haxy.
           apply gamma_b.
             assumption.
@@ -269,7 +235,7 @@ Proof.
           destruct Hayz as [bi2 | Hi2'].
             assumption.
           apply beq_nat_false in Hi2.
-          apply Hi2 in Hi2'. contradiction.
+          contradiction.
         rewrite Hi1 in Haxy.
         unfold after in Hayz.
         rewrite Hi1 in Hayz.
@@ -383,16 +349,11 @@ Proof.
   split; intros H.
   - (* H: update theta i d i0 = update theta i d j *)
     unfold after.
-    assert (Hi0: (i0 =? i) = true \/ (i0 =? i) = false).
-      case (i0 =? i). auto. auto.
-    destruct Hi0 as [Hi0 | Hi0].
+    case_eq (i0 =? i); intros Hi0.
     + (* Hi0: (i0 =? i) = true *)
-      rewrite Hi0.
       unfold update in H.
       rewrite Hi0 in H.
-      assert (Hj: (j =? i) = true \/ (j =? i) = false).
-        case (j =? i). auto. auto.
-      destruct Hj as [Hj | Hj].
+      case_eq (j =? i); intros Hj.
       * (* Hj: (j =? i) = true *)
         apply beq_nat_true in Hj. auto.
       * (* Hj: (j =? i) = false *)
@@ -400,49 +361,36 @@ Proof.
         rewrite Hj in H.
         auto.
     + (* Hi0: (i0 =? i) = false *)
-      rewrite Hi0.
       unfold update in H.
       rewrite Hi0 in H.
-      assert (Hj: (j =? i) = true \/ (j =? i) = false).
-        case (j =? i). auto. auto.
-      destruct Hj as [Hj | Hj].
+      case_eq (j =? i); intros Hj.
       * (* Hj: (j =? i) = true *)
-        rewrite Hj.
         rewrite Hj in H.
         apply theta_d_b. assumption.
       * (* Hj: (j =? i) = false *)
-        rewrite Hj.
         rewrite Hj in H.
         apply theta_gamma. assumption.
   - (* H: after gamma b i (X i0) (X j) *)
     unfold update.    
-    assert (Hi0: (i0 =? i) = true \/ (i0 =? i) = false).
-      case (i0 =? i). auto. auto.
-    destruct Hi0 as [Hi0 | Hi0].
+    case_eq (i0 =? i); intros Hi0.
     + (* Hi0: (i0 =? i) = true *)
-      rewrite Hi0.
       unfold after in H.
       rewrite Hi0 in H.
       destruct H as [bj | ji].
         apply theta_d_b in bj.
         rewrite bj.
-        case (j =? i). reflexivity. reflexivity.
+        case (j =? i). trivial. trivial.
       rewrite ji.
       rewrite <- beq_nat_refl.
       reflexivity.
     + (* Hi0: (i0 =? i) = false *)
-      rewrite Hi0.
       unfold after in H.
       rewrite Hi0 in H.
-      assert (Hj: (j =? i) = true \/ (j =? i) = false).
-        case (j =? i). auto. auto.
-      destruct Hj as [Hj | Hj].
+      case_eq (j =? i); intros Hj.
       * (* Hj: (j =? i) = true *)
-        rewrite Hj.
         rewrite Hj in H.
         apply theta_d_b. assumption.
       * (* Hj: (j =? i) = false *)      
-        rewrite Hj.
         rewrite Hj in H.
         apply theta_gamma. assumption.
 Qed.
