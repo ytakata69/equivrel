@@ -72,9 +72,17 @@ Definition after (gamma : Rel) (b : guard) (i : nat) (xi xj : register) :=
   | x, y => x = y
   end.
 
+(* an equivalence relation over (X i)'s *)
+Definition is_simpl_rel (phi : Rel) :=
+  forall xi xj : register,
+    match xi, xj with
+    | (X i), (X j) => True
+    | x, y => phi x y <-> x = y
+    end.
+
 Axiom rel_extensionality :
-  forall gamma gamma',
-    (forall i j, gamma (X i) (X j) <-> gamma' (X i) (X j)) -> gamma = gamma'.
+  forall phi phi' : Rel,
+    (forall xi xj, phi xi xj <-> phi' xi xj) -> phi = phi'.
 
 (* models *)
 
@@ -85,7 +93,8 @@ Instance rel_models_guard : Models Rel guard :=
   { models phi b := forall i, b i ->
                     forall j, b j <-> phi (X i) (X j) }.
 Instance assignment_models_rel : Models assignment Rel :=
-  { models theta phi := forall i j, theta i = theta j <-> phi (X i) (X j) }.
+  { models theta phi := is_simpl_rel phi /\
+                        forall i j, theta i = theta j <-> phi (X i) (X j) }.
 Instance assignmentD_models_guard : Models (assignment * D) guard :=
   { models theta_d b :=
       match theta_d with
@@ -358,12 +367,27 @@ Proof.
       apply gsym. auto.
 Qed.
 
+Lemma after_is_simpl_rel :
+  forall i, is_simpl_rel (after gamma b i).
+Proof.
+  intros i.
+  unfold is_simpl_rel.
+  intros xi xj.
+  case xi, xj.
+  - auto.
+  - unfold after. reflexivity.
+  - unfold after. reflexivity.
+  - unfold after. reflexivity.
+Qed.
+
 Lemma updated_models_after :
   forall d, forall i,
     theta |= gamma /\ (theta, d) |= b -> update theta i d |= after gamma b i.
 Proof.
   intros d i [theta_gamma theta_d_b].
   unfold models. unfold assignment_models_rel.
+  split.
+    apply after_is_simpl_rel.
   intros i0 j.
   split; intros H.
   - (* H: update theta i d i0 = update theta i d j *)
@@ -445,12 +469,26 @@ Lemma type_uniqueness :
   theta |= gamma /\ theta |= gamma' -> gamma = gamma'.
 Proof.
   unfold models. unfold assignment_models_rel.
-  intros [tg tg'].
+  intros [[gsimpl tg] [g'simpl tg']].
   apply rel_extensionality.
-  intros i j.
+  intros x y.
   split; intros Hg.
-    apply tg'. apply tg in Hg. assumption.
-    apply tg. apply tg' in Hg. assumption.
+  - case x, y.
+    + apply tg'. apply tg in Hg. assumption.
+    + apply (gsimpl (X i) (X' i0)) in Hg. discriminate.
+    + apply (gsimpl (X' i) (X i0)) in Hg. discriminate.
+    + apply (gsimpl (X' i) (X' i0)) in Hg.
+      case Hg.
+      destruct gamma'_equiv as [g'ref _].
+      apply g'ref.
+  - case x, y.
+    + apply tg. apply tg' in Hg. assumption.
+    + apply (g'simpl (X i) (X' i0)) in Hg. discriminate.
+    + apply (g'simpl (X' i) (X i0)) in Hg. discriminate.
+    + apply (g'simpl (X' i) (X' i0)) in Hg.
+      case Hg.
+      destruct gamma_equiv as [gref _].
+      apply gref.
 Qed.
 
 End Uniqueness.
