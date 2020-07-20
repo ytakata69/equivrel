@@ -37,11 +37,6 @@ Section EquivRel.
 Variable D : Set.
 Definition assignment := nat -> D.
 
-Inductive assignmentD :=
-| AD (theta : assignment) (d : D).
-
-Notation "( theta , d )" := (AD theta d).
-
 Definition update (theta : assignment) (i : nat) (d : D) (j : nat) : D :=
   if j =? i then d else theta j.
 
@@ -91,7 +86,7 @@ Instance rel_models_guard : Models Rel guard :=
                     forall j, b j <-> phi (X i) (X j) }.
 Instance assignment_models_rel : Models assignment Rel :=
   { models theta phi := forall i j, theta i = theta j <-> phi (X i) (X j) }.
-Instance assignmentD_models_guard : Models assignmentD guard :=
+Instance assignmentD_models_guard : Models (assignment * D) guard :=
   { models theta_d b :=
       match theta_d with
       | (theta, d) => forall i, theta i = d <-> b i
