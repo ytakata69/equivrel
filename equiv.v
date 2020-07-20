@@ -2,34 +2,6 @@
 
 Require Import Bool Arith.
 
-Definition classic := forall P, ~~P -> P.
-
-Section Basics.
-
-Lemma excluded_middle : classic -> forall P, P \/ ~P.
-Proof.
-  intros Classic P.
-  apply Classic. intros H.
-  apply H.
-  right.
-  intros p.
-  apply H.
-  left.
-  assumption.
-Qed.
-
-Lemma not_exists_to_forall :
-  forall (A : Set) (P : A -> Prop),
-    (~ exists x, P x) -> forall x, ~ P x.
-Proof.
-  intros T P Hne x Px.
-  apply Hne.
-  exists x.
-  assumption.
-Qed.
-
-End Basics.
-
 Section EquivRel.
 
 (* assignments *)
@@ -104,18 +76,6 @@ Instance assignmentD_models_guard : Models (assignment * D) guard :=
 (* lemmas *)
 
 Variables b : guard.
-
-Lemma ex_b_i_or_not :
-  classic -> (exists j, b j) \/ forall i, ~ b i.
-Proof.
-  intros Classic.
-  assert (exm : (exists j, b j) \/ ~ exists j, b j).
-    apply excluded_middle. apply Classic.
-  destruct exm as [bj | nbj].
-    auto.
-  right. apply not_exists_to_forall. assumption.
-Qed.
-
 
 Section AfterIsEquivRel.
 
@@ -328,42 +288,43 @@ Variable theta : assignment.
 Variable gamma : Rel.
 Hypothesis gamma_equiv : is_equiv_rel gamma.
 
+(* assumptions *)
+(* note: b_is_empty_or_not can be proved under the classical logic. *)
+Definition b_is_empty_or_not := (forall i, ~ b i) \/ exists i, b i.
 Definition outside_data_exists := exists d : D, forall i, theta i <> d.
 
 Lemma type_guarantees_applicability :
-  classic -> outside_data_exists ->
+  b_is_empty_or_not -> outside_data_exists ->
   theta |= gamma -> gamma |= b <-> exists d, (theta , d) |= b.
 Proof.
-  intros Classic Outside_data_exists Hth_g.
+  intros B_is_empty_or_not Outside_data_exists theta_gamma.
   destruct gamma_equiv as [gref [gsym gtran]].
-  split; intros Hg_b.
-  - assert (Hb : (exists i1, b i1) \/ forall i1, ~ b i1).
-      apply ex_b_i_or_not. apply Classic.
-    destruct Hb as [[i1 bi1] | Hnbi].
-    + apply Hg_b in bi1.
-      exists (theta i1). 
-      unfold models. unfold assignmentD_models_guard.
-      intros i0.
-      split; intros H'.
-      * apply bi1. apply Hth_g. auto.
-      * apply Hth_g. apply gsym. apply bi1. auto.
+  split; intros gamma_b.
+  - destruct B_is_empty_or_not as [b_empty | [i1 bi1]].
     + destruct Outside_data_exists as [dd dd_neq].
       exists dd.
       unfold models. unfold assignmentD_models_guard.
       intros i0.
       split; intros H'.
       * apply dd_neq in H'. case H'.
-      * apply Hnbi in H'. case H'.
-  - destruct Hg_b as [d Hth_d_b].
+      * apply b_empty in H'. case H'.
+    + apply gamma_b in bi1.
+      exists (theta i1).
+      unfold models. unfold assignmentD_models_guard.
+      intros i0.
+      split; intros H'.
+      * apply bi1. apply theta_gamma. auto.
+      * apply theta_gamma. apply gsym. apply bi1. auto.
+  - destruct gamma_b as [d theta_d_b].
     unfold models. unfold rel_models_guard.
     intros i1 bi1 j1.
     split; intros H.
-    + apply Hth_g.
-      apply Hth_d_b in bi1. rewrite bi1.
-      apply Hth_d_b in H. rewrite H. reflexivity.
-    + apply Hth_d_b in bi1.      
-      apply Hth_d_b. rewrite <- bi1.
-      apply Hth_g.
+    + apply theta_gamma.
+      apply theta_d_b in bi1. rewrite bi1.
+      apply theta_d_b in H. rewrite H. reflexivity.
+    + apply theta_d_b in bi1.
+      apply theta_d_b. rewrite <- bi1.
+      apply theta_gamma.
       apply gsym. auto.
 Qed.
 
@@ -380,7 +341,7 @@ Proof.
   - unfold after. reflexivity.
 Qed.
 
-Lemma updated_models_after :
+Lemma updated_assignment_models_after :
   forall d, forall i,
     theta |= gamma /\ (theta, d) |= b -> update theta i d |= after gamma b i.
 Proof.
