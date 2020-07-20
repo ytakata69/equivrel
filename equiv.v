@@ -149,7 +149,7 @@ Proof.
         destruct Ha as [Ha | Ha].
           assumption.
         apply beq_nat_false in Hi1.
-        apply Hi1 in Ha. case Ha.
+        apply Hi1 in Ha. contradiction.
       * (* Hi0: (i0 =? i) = false *)
         rewrite Hi0.
         unfold after in Ha.
@@ -209,7 +209,7 @@ Proof.
             left. assumption.
           assumption.
         apply beq_nat_false in Hi1.
-        apply Hi1 in Hi1'. case Hi1'.
+        apply Hi1 in Hi1'. contradiction.
     + (* Hi0: (i0 =? i) = false *)
       unfold after.
       rewrite Hi0.
@@ -248,7 +248,7 @@ Proof.
           destruct Hayz as [bi2 | Hi2'].
             assumption.
           apply beq_nat_false in Hi2.
-          apply Hi2 in Hi2'. case Hi2'.
+          apply Hi2 in Hi2'. contradiction.
         rewrite Hi1 in Haxy.
         unfold after in Hayz.
         rewrite Hi1 in Hayz.
@@ -315,8 +315,8 @@ Proof.
       unfold models. unfold assignmentD_models_guard.
       intros i0.
       split; intros H'.
-      * apply dd_neq in H'. case H'.
-      * apply b_empty in H'. case H'.
+      * apply dd_neq in H'. contradiction.
+      * apply b_empty in H'. contradiction.
     + apply gamma_b in bi1.
       exists (theta i1).
       unfold models. unfold assignmentD_models_guard.
