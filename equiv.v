@@ -286,7 +286,7 @@ Qed.
 End AfterIsEquivRel.
 
 
-Section TypeGuaranteesApplicability.
+Section RegisterTypes.
 
 Variable theta : assignment.
 Variable gamma : Rel.
@@ -403,13 +403,7 @@ Proof.
         apply theta_gamma. assumption.
 Qed.
 
-End TypeGuaranteesApplicability.
-
-Section Uniqueness.
-
-Variable theta : assignment.
-Variables gamma gamma' : Rel.
-Hypothesis gamma_equiv  : is_equiv_rel gamma.
+Variable gamma' : Rel.
 Hypothesis gamma'_equiv : is_equiv_rel gamma'.
 
 Lemma type_uniqueness :
@@ -438,23 +432,23 @@ Proof.
       apply gref.
 Qed.
 
-End Uniqueness.
+End RegisterTypes.
 
 
-Section AfterRWellDefined.
+Section AfterR.
 
-Variable j : nat.
 Variable phi : Rel.
 Hypothesis phi_equiv : is_equiv_rel phi.
-Hypothesis lat_phi_models_b : lat phi |= b.
 
 Lemma afterR_well_defined :
-  ~((exists l1, phi (X j) (X' l1) /\ b l1) /\
-     exists l2, ~(phi (X j) (X' l2) <-> b l2)).
+  lat phi |= b -> forall j,
+    ~((exists l1, phi (X j) (X' l1) /\ b l1) /\
+       exists l2, ~(phi (X j) (X' l2) <-> b l2)).
 Proof.
+  intros lat_phi_b j.
   destruct phi_equiv as [eqref [eqsym eqtran]].
   intros [[l1 [pjl1 bl1]] [l2 H2]].
-  apply lat_phi_models_b in bl1.
+  apply lat_phi_b in bl1.
   apply H2.
   split; intros H.
   - apply bl1.
@@ -468,13 +462,15 @@ Qed.
 
 (* another representation of the above lemma *)
 Lemma afterR_well_defined'1 :
-  (exists l1, phi (X j) (X' l1) /\ b l1) ->
-   forall l2, phi (X j) (X' l2) <-> b l2.
+  lat phi |= b -> forall j,
+    (exists l1, phi (X j) (X' l1) /\ b l1) ->
+     forall l2, phi (X j) (X' l2) <-> b l2.
 Proof.
+  intros lat_phi_b j.
   intros el1 l2.
   destruct phi_equiv as [_ [eqsym eqtran]].
   destruct el1 as [l1 [pjl1 bl1]].
-  apply lat_phi_models_b in bl1.
+  apply lat_phi_b in bl1.
   split; intros H.
   - apply bl1.
     apply eqsym in pjl1.
@@ -486,12 +482,14 @@ Proof.
 Qed.
 
 Lemma afterR_well_defined'2 :
-  (exists l1, ~ (phi (X j) (X' l1) <-> b l1)) ->
-   forall l2, ~ (phi (X j) (X' l2) /\ b l2).
+  lat phi |= b -> forall j,
+    (exists l1, ~ (phi (X j) (X' l1) <-> b l1)) ->
+     forall l2, ~ (phi (X j) (X' l2) /\ b l2).
 Proof.
+  intros lat_phi_b j.
   intros el1 l2 [pjl2 bl2].
   destruct phi_equiv as [_ [eqsym eqtran]].
-  apply lat_phi_models_b in bl2.
+  apply lat_phi_b in bl2.
   unfold lat in bl2.
   destruct el1 as [l1 npjl1].
   apply npjl1.
@@ -505,22 +503,16 @@ Proof.
     auto.
 Qed.
 
-End AfterRWellDefined.
-
-Section AfterRExists.
-
-Variable  d : D.
 Variables theta theta' : assignment.
-Variables phi phi' : Rel.
-Hypothesis phi_equiv  : is_equiv_rel phi.
+Variable  phi' : Rel.
 Hypothesis phi'_equiv : is_equiv_rel phi'.
 
 Lemma afterR_exists_core' :
-  (theta, d) |= b ->
+  forall d : D, (theta, d) |= b ->
     forall j l, (theta' j = theta l /\ b l -> theta' j = d) /\
-                ( ~ (theta' j = theta l <-> b l) -> theta' j <> d).
+             (~ (theta' j = theta l <-> b l) -> theta' j <> d).
 Proof.
-  intros theta_d_b.
+  intros d theta_d_b.
   intros j l.
   split.
   - intros [theta_jl bl].
@@ -537,16 +529,16 @@ Proof.
       auto.
 Qed.
 
+Hypothesis theta_phi : (theta', theta) |= phi.
+
 Lemma afterR_exists_core :
-  forall i : nat,
-    (theta', theta) |= phi ->
-    (theta', update theta i d) |= phi' ->
-    (theta, d) |= b ->
-      forall j l, (phi (X j) (X' l) /\ b l -> phi' (X j) (X' i)) /\
-                  ( ~ (phi (X j) (X' l) <-> b l) -> ~ phi' (X j) (X' i)).
+  forall d : D, (theta, d) |= b ->
+    forall i : nat,
+      (theta', update theta i d) |= phi' ->
+        forall j l, (phi (X j) (X' l) /\ b l -> phi' (X j) (X' i)) /\
+                 (~ (phi (X j) (X' l) <-> b l) -> ~ phi' (X j) (X' i)).
 Proof.
-  intros i.
-  intros theta_phi theta_phi' theta_d_b.
+  intros d theta_d_b i theta_phi'.
   intros j l.
   split.
   - intros [pjl bl].
@@ -572,14 +564,13 @@ Proof.
       assumption.
 Qed.
 
-Lemma afterR_exists :
-  forall i : nat,
-    (theta', theta) |= phi ->
-    (theta', update theta i d) |= phi' ->
+Lemma deriv_implies_afterR :
+  forall (d : D) (i : nat),
     (theta, d) |= b ->
+    (theta', update theta i d) |= phi' ->
       afterR phi b i phi'.
 Proof.
-  intros i theta_phi theta_phi' theta_d_b.
+  intros d i theta_d_b theta_phi'.
   unfold afterR.
   split. (* many cases *)
   { (* former phi' = former phi *)
@@ -656,7 +647,7 @@ Proof.
       { assumption. }
   }
   split.
-  { apply (afterR_exists_core _ theta_phi theta_phi' theta_d_b). }
+  { apply (afterR_exists_core _ theta_d_b _ theta_phi'). }
   { intros j l nli.
     split; intros H.
     - apply theta_phi'.
@@ -674,23 +665,22 @@ Proof.
   }
 Qed.
 
-End AfterRExists.
+End AfterR.
 
-Section AfterLExists.
+Section AfterL.
 
-Variable  d : D.
 Variables theta theta' : assignment.
 Variables phi : Rel.
 Hypothesis phi_equiv : is_equiv_rel phi.
+Hypothesis theta_phi : (theta', theta) |= phi.
 
 Lemma afterL_exists :
-  forall j : nat,
+  forall (d : D) (j : nat),
     theta j = d ->
-    (theta', theta) |= phi ->
       (theta', d) |= inv phi j /\
       ((update theta' j d), theta) |= afterL phi j.
 Proof.
-  intros j theta_j_d theta_phi.
+  intros d j theta_j_d.
   split.
   - (* (theta', d) |= inv phi j *)
     unfold models. unfold assignmentD_models_guard.
@@ -827,6 +817,6 @@ Proof.
     }
 Qed.
 
-End AfterLExists.
+End AfterL.
 
 End EquivRel.
