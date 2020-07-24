@@ -5,12 +5,23 @@ Require Export Nat Arith.EqNat.
 Parameter D : Set.
 Definition assignment := nat -> D.
 
-Definition update (theta : assignment) (i : nat) (d : D) (j : nat) : D :=
-  if j =? i then d else theta j.
+Definition update (theta : assignment) (i : nat) (d : D) : assignment :=
+  fun j : nat => if j =? i then d else theta j.
+
+Axiom outside_data_exists :
+  forall theta : assignment, exists d : D, forall i, theta i <> d.
+
+Axiom outside_data_exists' :
+  forall theta theta': assignment, exists d : D,
+    (forall i, theta i <> d) /\ (forall i, theta' i<> d).
 
 (* guard *)
 
 Definition guard := nat -> Prop.  (* a subset of nat *)
+
+(* note: b_is_empty_or_not can be proved under the classical logic. *)
+Axiom b_is_empty_or_not :
+  forall b : guard, (forall i, ~ b i) \/ exists i, b i.
 
 (* equivalence relations *)
 

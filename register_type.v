@@ -5,20 +5,14 @@ Parameter theta : assignment.
 Parameter gamma : Rel.
 Parameter gamma_equiv : is_equiv_rel gamma.
 
-(* assumptions *)
-(* note: b_is_empty_or_not can be proved under the classical logic. *)
-Definition b_is_empty_or_not := (forall i, ~ b i) \/ exists i, b i.
-Definition outside_data_exists := exists d : D, forall i, theta i <> d.
-
 Lemma type_guarantees_applicability :
-  b_is_empty_or_not -> outside_data_exists ->
   theta |= gamma -> gamma |= b <-> exists d, (theta , d) |= b.
 Proof.
-  intros B_is_empty_or_not Outside_data_exists theta_gamma.
+  intros theta_gamma.
   destruct gamma_equiv as [gref [gsym gtran]].
   split; intros gamma_b.
-  - destruct B_is_empty_or_not as [b_empty | [i1 bi1]].
-    + destruct Outside_data_exists as [dd dd_neq].
+  - destruct (b_is_empty_or_not b) as [b_empty | [i1 bi1]].
+    + destruct (outside_data_exists theta) as [dd dd_neq].
       exists dd.
       unfold models. unfold assignmentD_models_guard.
       intros i0.
