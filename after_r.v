@@ -293,8 +293,7 @@ Proof.
   -- (* theta l = theta' j -> b l *)
     apply theta_phi in H.
     destruct (Hi j l) as [_ Hi1].
-    elimtype False.
-    apply Hi1.
+    elim Hi1.
   ++ (* ~ (phi (X j) (X' l) <-> b l) *)
     intros pjl_bl.
     apply phi_sym in H.
@@ -333,8 +332,7 @@ Proof.
   * rewrite i0i in H. rewrite j0i in H.
     apply theta_phi in H.
     destruct (Hi j j0) as [_ Hi1].
-    elimtype False.
-    apply Hi1.
+    elim Hi1.
       intros pjj0_bj0.
       apply pjj0_bj0 in H.
       apply b_empty in H. contradiction.
@@ -345,8 +343,7 @@ Proof.
     apply theta_phi in H.
     apply phi_sym in H.
     destruct (Hi j i0) as [_ Hi1].
-    elimtype False.
-    apply Hi1.
+    elim Hi1.
       intros pji0_bi0.
       apply pji0_bi0 in H.
       apply b_empty in H. contradiction.
