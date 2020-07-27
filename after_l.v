@@ -6,11 +6,57 @@ Parameter phi : Rel.
 Parameter phi_equiv : is_equiv_rel phi.
 Parameter theta_phi : (theta', theta) |= phi.
 
+Lemma former_is_simpl_rel :
+  forall phi, is_simpl_rel (former phi).
+Proof.
+  intros phi.
+  unfold is_simpl_rel; unfold former.
+  intros x y.
+  case x, y.
+  - apply I.
+  - split; intros H; assumption.
+  - split; intros H; assumption.
+  - split; intros H; assumption.
+Qed.
+
+Lemma updated_assignment_models_former_afterL :
+  forall j d,
+    (theta', d) |= inv phi j ->
+    update theta' j d |= former (afterL phi j).
+Proof.
+  intros j d theta'_d_b.
+  unfold models; unfold assignment_models_rel.
+  split.
+    apply former_is_simpl_rel.
+  intros i0 j0.
+  unfold update; unfold former; unfold afterL;
+  unfold after.
+  case_eq (i0 =? j); intros i0j.
+  - case_eq (j0 =? j); intros j0j.
+  + split; intros H.
+  * right; apply beq_nat_true; exact j0j.
+  * reflexivity.
+  + split; intros H.
+  * left.
+    apply theta'_d_b; auto.
+  * destruct H as [H | H].
+      apply theta'_d_b in H; auto.
+    apply beq_nat_false in j0j.
+    contradiction.
+  - case_eq (j0 =? j); intros j0j.
+  + split; intros H.
+  * apply theta'_d_b; exact H.
+  * apply theta'_d_b in H; exact H.
+  + unfold former.
+    split; intros H;
+    apply theta_phi; exact H.
+Qed.
+
 Lemma deriv_implies_afterL :
   forall (d : D) (j : nat),
     theta j = d ->
       (theta', d) |= inv phi j /\
-      ((update theta' j d), theta) |= afterL phi j.
+      (update theta' j d, theta) |= afterL phi j.
 Proof.
   intros d j theta_j_d.
   split.
