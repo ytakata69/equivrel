@@ -117,3 +117,77 @@ Instance two_assignments_model_rel : Models (assignment * assignment) Rel :=
                       (theta  i = theta' j <-> phi (X  i) (X' j)) /\
                       (theta' i = theta  j <-> phi (X' i) (X  j))
       end }.
+
+(* grammar *)
+
+Local Open Scope type_scope.
+
+Parameter V : Set.  (* nonterminals *)
+Definition V' := V * Rel.
+
+Parameter ruleG :
+  V' -> (option (guard * nat)) -> (option nat) -> V' -> Prop.
+
+Axiom ruleG_is_normal_form :
+  forall A B gamma gamma' jj,
+    (ruleG (A, gamma) None jj (B, gamma') -> gamma = gamma') /\
+    (forall b i,
+     ruleG (A, gamma) (Some (b, i)) jj (B, gamma') ->
+       gamma' = after gamma b i).
+
+Definition ruleG' (v1 : V') (gg : option (guard * nat)) (jj : option nat)
+                  (v2 : V') : Prop :=
+  match v1, v2 with
+  | (A, phi), (B, phi') =>
+    match gg with
+    | Some (b, j) =>
+        ruleG (A, lat phi) None (Some j) (B, lat phi') /\
+           b = inv phi j /\
+        phi' = afterL phi j /\
+          jj = Some j
+    | None =>
+       (ruleG (A, lat phi) None None (B, lat phi') /\
+        phi' = phi /\ jj = None) \/
+       (exists b i,
+        ruleG (A, lat phi) (Some (b, i)) None (B, lat phi') /\
+        afterR phi b i phi' /\ jj = None)
+    end
+  end.
+
+Definition config := V' * assignment.
+
+Definition derivG (c1 : config) (dd : option D) (c2 : config) : Prop :=
+  match c1, c2 with
+  | ((A, gamma), theta), ((B, gamma'), theta') =>
+    match dd with
+    | Some d =>
+        exists j,
+        ruleG (A, gamma) None (Some j) (B, gamma') /\
+        theta = theta' /\ d = theta j
+    | None =>
+       (ruleG (A, gamma) None None (B, gamma') /\
+        theta = theta')
+        \/
+       (exists b i d,
+        ruleG (A, gamma) (Some (b, i)) None (B, gamma') /\
+        (theta, d) |= b /\ theta' = update theta i d)
+    end
+  end.
+
+Definition derivG' (c1 : config) (dd : option D) (c2 : config) : Prop :=
+  match c1, c2 with
+  | ((A, phi), theta), ((B, phi'), theta') =>
+    match dd with
+    | Some d' =>
+        exists b i j d,
+        ruleG' (A, phi) (Some (b, i)) (Some j) (B, phi') /\
+        (theta, d) |= b /\
+        theta' = update theta i d /\
+        d' = theta' j
+    | None =>
+        ruleG' (A, phi) None None (B, phi') /\
+        theta = theta'
+    end
+  end.
+
+Local Close Scope type_scope.
