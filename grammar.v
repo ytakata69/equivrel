@@ -1,83 +1,12 @@
 Require Import equiv.
+Require Import register_type.
 Require Import after after_r after_l.
-
-(* auxiliary lemmas *)
-
-Lemma gamma_lat_phi :
-  forall (gamma phi : Rel) (theta theta' : assignment),
-    is_simpl_rel gamma ->
-    theta |= gamma ->
-    (theta', theta) |= phi ->
-      gamma = lat phi.
-Proof.
-  intros gamma phi theta theta';
-  intros ga_simpl th_ga theta_phi.
-  apply rel_extensionality.
-  intros x y.
-  split; intros H.
-  - unfold lat.
-    case x, y.
-  + apply theta_phi; apply th_ga; exact H.
-  + apply (ga_simpl (X i) (X' i0)); exact H.
-  + apply (ga_simpl (X' i) (X i0)); exact H.
-  + apply (ga_simpl (X' i) (X' i0)); exact H.
-  - case x, y.
-  + unfold lat in H.
-    apply th_ga; apply theta_phi; exact H.
-  + unfold lat in H.
-    apply (ga_simpl (X i) (X' i0)); exact H.
-  + unfold lat in H.
-    apply (ga_simpl (X' i) (X i0)); exact H.
-  + unfold lat in H.
-    apply (ga_simpl (X' i) (X' i0)); exact H.
-Qed.
-
-Lemma lat_eq_lat_afterL :
-  forall phi j,
-    lat phi = lat (afterL phi j).
-Proof.
-  intros phi j.
-  apply rel_extensionality.
-  unfold lat.
-  case x, y; try reflexivity.
-Qed.
-
-Lemma gamma_lat_rel_between :
-  forall (gamma : Rel) (theta theta' : assignment),
-    is_simpl_rel gamma ->
-    theta |= gamma ->
-      gamma = lat (rel_between theta' theta).
-Proof.
-  intros gamma theta theta';
-  intros ga_simpl th_ga.
-  apply rel_extensionality.
-  unfold lat; unfold rel_between.
-  case x, y.
-  - split; intros H; apply th_ga; exact H.
-  - split; intros H;
-    apply (ga_simpl (X i) (X' i0)); exact H.
-  - split; intros H;
-    apply (ga_simpl (X' i) (X i0)); exact H.
-  - split; intros H;
-    apply (ga_simpl (X' i) (X' i0)); exact H.
-Qed.
-
-Lemma assignments_model_rel_between :
-  forall theta theta',
-  (theta, theta') |= rel_between theta theta'.
-Proof.
-  intros theta theta'.
-  unfold models; unfold two_assignments_model_rel.
-  unfold rel_between.
-  intros i j.
-  repeat split; auto.
-Qed.
-
-(* main lemmas *)
 
 Parameter A B : V.
 Parameter phi : Rel.
 Axiom phi_equiv : is_equiv_rel phi.
+
+
 
 Lemma derivG_implies_derivG'_1 :
   forall gamma gamma' theta1 theta2 theta'1,
