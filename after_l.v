@@ -53,12 +53,14 @@ Proof.
 Qed.
 
 Lemma deriv_implies_afterL :
-  forall (d : D) (j : nat),
+  forall phi theta theta' j d,
+    (theta', theta) |= phi ->
     theta j = d ->
       (theta', d) |= inv phi j /\
       (update theta' j d, theta) |= afterL phi j.
 Proof.
-  intros d j theta_j_d.
+  intros phi theta theta' j d;
+  intros theta_phi theta_j_d.
   split.
   - (* (theta', d) |= inv phi j *)
     unfold models; unfold assignmentD_models_guard.

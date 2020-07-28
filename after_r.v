@@ -239,28 +239,34 @@ Proof.
   reflexivity.
 Qed.
 
-Axiom classic : forall P : Prop, ~ ~ P -> P.
+Definition classic := forall P : Prop, ~ ~ P -> P.
 
 Lemma phi_ji_or_not :
+  classic ->
   forall (phi : Rel) (i : nat),
     (exists j, phi (X j) (X' i)) \/ forall j, ~ phi (X j) (X' i).
 Proof.
+  intros Classic.
   intros phi i.
-  apply classic.
+  apply Classic.
   intros H. apply H. right.
   intros j p. apply H. left.
   exists j. assumption.
 Qed.
 
-Lemma contrapositive : forall P Q : Prop, (~ P -> ~ Q) -> Q -> P.
+Lemma contrapositive :
+  classic ->
+  forall P Q : Prop, (~ P -> ~ Q) -> Q -> P.
 Proof.
+  intros Classic.
   intros P Q npnq q.
-  apply classic.
+  apply Classic.
   intros np.
   apply npnq. assumption. assumption.
 Qed.
 
 Lemma afterR_implies_deriv :
+  classic ->
   forall phi phi' theta theta' b,
     is_equiv_rel phi /\ is_equiv_rel phi' ->
     (theta', theta) |= phi ->
@@ -269,6 +275,7 @@ Lemma afterR_implies_deriv :
     afterR phi b i phi' ->
   exists d : D, (theta, d) |= b /\ (theta', update theta i d) |= phi'.
 Proof.
+  intros Classic.
   intros phi phi' theta theta' b;
   intros [phi_equiv phi'_equiv] theta_phi lat_phi_b;
   intros i phi'_in_after.
@@ -289,7 +296,7 @@ Proof.
   }
   destruct (b_is_empty_or_not b) as [b_empty | [j bj]].
   - (* b_empty: forall i, ~ b i *)
-    destruct (phi_ji_or_not phi' i) as [[j phi'_ji] | not_phi'_ji].
+    destruct (phi_ji_or_not Classic phi' i) as [[j phi'_ji] | not_phi'_ji].
   + (* phi'_ji: phi' (X j) (X' i) *)
     exists (theta' j).
     split.
@@ -681,7 +688,8 @@ Proof.
   + apply beq_nat_true in j0i.
     rewrite j0i in H.
     destruct (Hi i0 j) as [_ Hi1].
-    apply (contrapositive (phi (X i0) (X' j) <-> b j) _) in Hi1; try auto.
+    apply (contrapositive Classic (phi (X i0) (X' j) <-> b j) _)
+    in Hi1; try auto.
     apply Hi1 in bj.
     apply theta_phi.
     assumption.
@@ -716,7 +724,8 @@ Proof.
   + apply beq_nat_true in i0i.
     rewrite i0i in H.
     destruct (Hi j0 j) as [_ Hi1].
-    apply (contrapositive (phi (X j0) (X' j) <-> b j) _) in Hi1; try auto.
+    apply (contrapositive Classic (phi (X j0) (X' j) <-> b j) _)
+    in Hi1; try auto.
     apply Hi1 in bj.
     apply theta_phi.
     apply phi_sym.

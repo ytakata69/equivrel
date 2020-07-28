@@ -1,9 +1,66 @@
 Require Import equiv.
-Require Import after after_r.
+Require Import after after_r after_l.
 
-Parameter A B : V.
-Parameter phi : Rel.
-Axiom phi_equiv : is_equiv_rel phi.
+(* auxiliary lemmas *)
+
+Lemma gamma_lat_phi :
+  forall (gamma phi : Rel) (theta theta' : assignment),
+    is_simpl_rel gamma ->
+    theta |= gamma ->
+    (theta', theta) |= phi ->
+      gamma = lat phi.
+Proof.
+  intros gamma phi theta theta';
+  intros ga_simpl th_ga theta_phi.
+  apply rel_extensionality.
+  intros x y.
+  split; intros H.
+  - unfold lat.
+    case x, y.
+  + apply theta_phi; apply th_ga; exact H.
+  + apply (ga_simpl (X i) (X' i0)); exact H.
+  + apply (ga_simpl (X' i) (X i0)); exact H.
+  + apply (ga_simpl (X' i) (X' i0)); exact H.
+  - case x, y.
+  + unfold lat in H.
+    apply th_ga; apply theta_phi; exact H.
+  + unfold lat in H.
+    apply (ga_simpl (X i) (X' i0)); exact H.
+  + unfold lat in H.
+    apply (ga_simpl (X' i) (X i0)); exact H.
+  + unfold lat in H.
+    apply (ga_simpl (X' i) (X' i0)); exact H.
+Qed.
+
+Lemma lat_eq_lat_afterL :
+  forall phi j,
+    lat phi = lat (afterL phi j).
+Proof.
+  intros phi j.
+  apply rel_extensionality.
+  unfold lat.
+  case x, y; try reflexivity.
+Qed.
+
+Lemma gamma_lat_rel_between :
+  forall (gamma : Rel) (theta theta' : assignment),
+    is_simpl_rel gamma ->
+    theta |= gamma ->
+      gamma = lat (rel_between theta' theta).
+Proof.
+  intros gamma theta theta';
+  intros ga_simpl th_ga.
+  apply rel_extensionality.
+  unfold lat; unfold rel_between.
+  case x, y.
+  - split; intros H; apply th_ga; exact H.
+  - split; intros H;
+    apply (ga_simpl (X i) (X' i0)); exact H.
+  - split; intros H;
+    apply (ga_simpl (X' i) (X i0)); exact H.
+  - split; intros H;
+    apply (ga_simpl (X' i) (X' i0)); exact H.
+Qed.
 
 Lemma assignments_model_rel_between :
   forall theta theta',
@@ -16,7 +73,13 @@ Proof.
   repeat split; auto.
 Qed.
 
-Lemma derivG_implies_derivG' :
+(* main lemmas *)
+
+Parameter A B : V.
+Parameter phi : Rel.
+Axiom phi_equiv : is_equiv_rel phi.
+
+Lemma derivG_implies_derivG'_1 :
   forall gamma gamma' theta1 theta2 theta'1,
     is_simpl_rel gamma ->
     derivG ((A, gamma), theta1) None ((B, gamma'), theta2) ->
@@ -32,25 +95,7 @@ Proof.
   unfold derivG in derivGAB.
 
   assert (gaphi: gamma = lat phi).
-  { apply rel_extensionality.
-    intros x y.
-    split; intros H.
-  - unfold lat.
-    case x, y.
-  + apply theta_phi; apply th1_ga; exact H.
-  + apply (ga_simpl (X i) (X' i0)); exact H.
-  + apply (ga_simpl (X' i) (X i0)); exact H.
-  + apply (ga_simpl (X' i) (X' i0)); exact H.
-  - case x, y.
-  + unfold lat in H.
-    apply th1_ga; apply theta_phi; exact H.
-  + unfold lat in H.
-    apply (ga_simpl (X i) (X' i0)); exact H.
-  + unfold lat in H.
-    apply (ga_simpl (X' i) (X i0)); exact H.
-  + unfold lat in H.
-    apply (ga_simpl (X' i) (X' i0)); exact H.
-  }
+  { apply (gamma_lat_phi _ _ theta1 theta'1); try auto. }
 
   destruct derivGAB
   as [[rAB th1th2] | [b [i [d [rAB [th1db th2up]]]]]].
@@ -90,63 +135,12 @@ Proof.
       split.
     - rewrite <- gaphi.
       assert (ga'phi': gamma' = lat (rel_between theta'1 theta2)).
-      { apply rel_extensionality.
-        intros x y.
+      { apply gamma_lat_rel_between.
         rewrite gaga'.
-        unfold after.
-        unfold rel_between; unfold lat.
-        case x, y; try reflexivity.
-      - (* x = X i0, y = X i1 *)
-        case_eq (i0 =? i); intros i0i.
-      + (* i0 = i *)
-        apply beq_nat_true in i0i.
-        split; intros H.
-      * (* b i1 \/ i1 = i -> theta2 i0 = theta2 i1 *)
-        rewrite i0i.
-        rewrite th2up; unfold update.
-        rewrite <- beq_nat_refl.
-        destruct H as [H | H].
-      -- apply th1db in H.
-        case (i1 =? i); auto.
-      -- rewrite H; rewrite <- beq_nat_refl.
-        reflexivity.
-      * (* <- *)
-        rewrite i0i in H.
-        case_eq (i1 =? i); intros i1i.
-      -- apply beq_nat_true in i1i.
-        right; assumption.
-      -- left.
-        apply th1db.
-        rewrite th2up in H.
-        unfold update in H.
-        rewrite <- beq_nat_refl in H.
-        rewrite i1i in H.
-        symmetry; exact H.
-      + (* i0 <> i *)
-        split; intros H.
-      * (* (if i1 =? i then b i 0 else gamma (X i0) (X i1))
-           -> theta2 i0 = theta2 i1 *)
-        case_eq (i1 =? i); intros i1i.
-      -- rewrite i1i in H.
-        apply th1db in H.
-        rewrite th2up; unfold update.
-        rewrite i0i; rewrite i1i.
-        exact H.
-      -- rewrite i1i in H.
-        rewrite th2up; unfold update.
-        rewrite i0i; rewrite i1i.
-        apply th1_ga; exact H.
-      * (* <- *)
-        case_eq (i1 =? i); intros i1i.
-      -- apply th1db.
-        rewrite th2up in H; unfold update in H.
-        rewrite i0i in H; rewrite i1i in H.
-        exact H.
-      -- apply th1_ga.
-        rewrite th2up in H; unfold update in H.
-        rewrite i0i in H; rewrite i1i in H.
-        exact H.
-      }
+        apply after_is_simpl_rel.
+        rewrite gaga'; rewrite th2up.
+        apply updated_assignment_models_after.
+        auto. }
       rewrite <- ga'phi'.
       exact rAB.
     - split; auto.
@@ -155,4 +149,46 @@ Proof.
       rewrite <- th2up.
       apply assignments_model_rel_between.
     }
+Qed.
+
+Lemma derivG_implies_derivG'_2 :
+  forall gamma theta1 theta'1 d,
+    is_simpl_rel gamma ->
+    derivG ((A, gamma), theta1) (Some d) ((B, gamma), theta1) ->
+    theta1 |= gamma ->
+    (theta'1, theta1) |= phi ->
+  exists phi' theta'2,
+    (theta'2, theta1) |= phi' /\
+    derivG' ((A, phi), theta'1) (Some d) ((B, phi'), theta'2).
+Proof.
+  intros gamma theta1 theta'1 d;
+  intros ga_simpl derivGAB th1_ga theta_phi.
+  unfold derivG in derivGAB.
+
+  destruct derivGAB as [j [rAB [_ d_th1]]].
+  exists (afterL phi j); exists (update theta'1 j d).
+  split.
+  - (* (update theta'1 j d, theta1) |= afterL phi j *)
+    destruct (deriv_implies_afterL phi theta1 theta'1 j d);
+    try auto.
+  - (* derivG' (A, phi, theta'1) (Some d) (B, afterL phi j, theta'2) *)
+    unfold derivG'.
+    exists (inv phi j); exists j; exists j; exists d.
+    unfold ruleG'.
+    repeat split; try auto.
+  + assert (gaphi: gamma = lat phi).
+    { apply (gamma_lat_phi _ _ theta1 theta'1); try auto. }
+    rewrite <- gaphi.
+    assert (latphi: lat phi = lat (afterL phi j)).
+    { apply lat_eq_lat_afterL. }
+    rewrite <- latphi; rewrite <- gaphi. exact rAB.
+  + intros H.
+    unfold inv; apply theta_phi.
+    rewrite H. exact d_th1.
+  + intros H.
+    unfold inv in H; apply theta_phi in H.
+    rewrite d_th1. exact H.
+  + unfold update.
+    rewrite <- beq_nat_refl.
+    reflexivity.
 Qed.
