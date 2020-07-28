@@ -142,7 +142,7 @@ Axiom ruleG_is_normal_form :
     (ruleG (A, gamma) None jj (B, gamma') -> gamma = gamma') /\
     (forall b i,
      ruleG (A, gamma) (Some (b, i)) jj (B, gamma') ->
-       gamma' = after gamma b i).
+       gamma |= b /\ gamma' = after gamma b i).
 
 Definition ruleG' (v1 : V') (gg : option (guard * nat)) (jj : option nat)
                   (v2 : V') : Prop :=

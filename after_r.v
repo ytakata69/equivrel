@@ -268,7 +268,7 @@ Qed.
 Lemma afterR_implies_deriv :
   classic ->
   forall phi phi' theta theta' b,
-    is_equiv_rel phi /\ is_equiv_rel phi' ->
+    is_equiv_rel phi -> is_equiv_rel phi' ->
     (theta', theta) |= phi ->
     lat phi |= b ->
   forall i : nat,
@@ -277,7 +277,7 @@ Lemma afterR_implies_deriv :
 Proof.
   intros Classic.
   intros phi phi' theta theta' b;
-  intros [phi_equiv phi'_equiv] theta_phi lat_phi_b;
+  intros phi_equiv phi'_equiv theta_phi lat_phi_b;
   intros i phi'_in_after.
   unfold afterR in phi'_in_after.
   destruct phi'_in_after as [fo [la [Hi Ho]]].

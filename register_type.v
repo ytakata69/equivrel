@@ -68,6 +68,36 @@ Proof.
       apply gref.
 Qed.
 
+Lemma updater_must_exist :
+  forall (theta : assignment) gamma b,
+    is_equiv_rel gamma -> theta |= gamma -> gamma |= b ->
+    exists d : D, (theta, d) |= b.
+Proof.
+  intros theta gamma b;
+  intros [_ [ga_sym _]] th_ga ga_b.
+  destruct (b_is_empty_or_not b) as [b_empty | [i bi]].
+  - destruct (outside_data_exists theta) as [d d_notin].
+    exists d.
+    unfold models; unfold assignmentD_models_guard.
+    intros i.
+    split; intros H.
+  + elim (d_notin i); exact H.
+  + elim (b_empty i); exact H.
+  - exists (theta i).
+    unfold models; unfold assignmentD_models_guard.
+    intros j.
+    split; intros H.
+  + apply th_ga in H.
+    apply ga_sym in H.
+    apply ga_b in H.
+  * exact H.
+  * exact bi.
+  + apply th_ga.
+    apply ga_b.
+  * exact H.
+  * exact bi.
+Qed.
+
 (* lat *)
 
 Lemma lat_phi_is_equiv_rel :
