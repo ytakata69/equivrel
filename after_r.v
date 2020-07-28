@@ -93,16 +93,17 @@ Proof.
       auto.
 Qed.
 
-Parameter theta_phi : (theta', theta) |= phi.
-
 Lemma afterR_exists_core :
-  forall d : D, (theta, d) |= b ->
+  forall (phi phi' : Rel) theta theta' b d,
+    (theta', theta) |= phi ->
+    (theta, d) |= b ->
     forall i : nat,
       (theta', update theta i d) |= phi' ->
         forall j l, (phi (X j) (X' l) /\ b l -> phi' (X j) (X' i)) /\
                  (~ (phi (X j) (X' l) <-> b l) -> ~ phi' (X j) (X' i)).
 Proof.
-  intros d theta_d_b i theta_phi'.
+  intros phi phi' theta theta' b d;
+  intros theta_phi theta_d_b i theta_phi'.
   intros j l.
   split.
   - intros [pjl bl].
@@ -129,12 +130,14 @@ Proof.
 Qed.
 
 Lemma deriv_implies_afterR :
-  forall (d : D) (i : nat),
+  forall phi phi' theta theta' b i d,
+    (theta', theta) |= phi ->
     (theta, d) |= b ->
     (theta', update theta i d) |= phi' ->
       afterR phi b i phi'.
 Proof.
-  intros d i theta_d_b theta_phi'.
+  intros phi phi' theta theta' b i d;
+  intros theta_phi theta_d_b theta_phi'.
   unfold afterR.
   repeat split. (* many cases *)
   - (* former phi' = former phi *)
@@ -196,8 +199,8 @@ Proof.
       unfold lat in H.
       apply theta_phi in H. assumption. }
   - (* phi (X j) (X' l) /\ b l <-> phi' (X j) (X' i) *)
-    apply (afterR_exists_core _ theta_d_b _ theta_phi').
-  - apply (afterR_exists_core _ theta_d_b _ theta_phi').
+    apply (afterR_exists_core _ _ _ _ _ _ theta_phi theta_d_b _ theta_phi').
+  - apply (afterR_exists_core _ _ _ _ _ _ theta_phi theta_d_b _ theta_phi').
   - (* phi (X j) (X' l) <-> phi' (X j) (X' l) *)
     case_eq (l =? i); intros li.
   + apply beq_nat_true in li. contradiction.
@@ -258,12 +261,16 @@ Proof.
 Qed.
 
 Lemma afterR_implies_deriv :
-  lat phi |= b ->
+  forall phi phi' theta theta' b,
+    is_equiv_rel phi /\ is_equiv_rel phi' ->
+    (theta', theta) |= phi ->
+    lat phi |= b ->
   forall i : nat,
-  afterR phi b i phi' ->
-    exists d : D, (theta, d) |= b /\ (theta', update theta i d) |= phi'.
+    afterR phi b i phi' ->
+  exists d : D, (theta, d) |= b /\ (theta', update theta i d) |= phi'.
 Proof.
-  intros lat_phi_b.
+  intros phi phi' theta theta' b;
+  intros [phi_equiv phi'_equiv] theta_phi lat_phi_b;
   intros i phi'_in_after.
   unfold afterR in phi'_in_after.
   destruct phi'_in_after as [fo [la [Hi Ho]]].

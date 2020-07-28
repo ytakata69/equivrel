@@ -80,6 +80,15 @@ Definition afterL (phi : Rel) (i : nat) : Rel :=
     | (X' l), (X  j) => if j =? i then phi (X' i) (X' l) else phi xl xj
     end.
 
+Definition rel_between (theta1 theta2 : assignment) : Rel :=
+  fun xi xj : register =>
+    match xi, xj with
+    | (X  i), (X  j) => theta1 i = theta1 j
+    | (X  i), (X' j) => theta1 i = theta2 j
+    | (X' i), (X  j) => theta2 i = theta1 j
+    | (X' i), (X' j) => theta2 i = theta2 j
+    end.
+
 (* an equivalence relation over (X i)'s *)
 Definition is_simpl_rel (phi : Rel) :=
   forall xi xj : register,

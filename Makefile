@@ -1,4 +1,4 @@
-targets = after.vo after_r.vo after_l.vo register_type.vo
+targets = after.vo after_r.vo after_l.vo register_type.vo grammar.vo
 
 .PHONY: clean all default
 %.vo: %.v

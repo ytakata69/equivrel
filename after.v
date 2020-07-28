@@ -171,8 +171,10 @@ Qed.
 
 
 Lemma after_is_simpl_rel : (* a relation over (X i) *)
+  forall gamma b i,
   is_simpl_rel (after gamma b i).
 Proof.
+  intros gamma b i.
   unfold is_simpl_rel.
   intros xi xj.
   case xi, xj.
@@ -182,13 +184,11 @@ Proof.
   - unfold after. reflexivity.
 Qed.
 
-Parameter theta : assignment.
-
 Lemma updated_assignment_models_after :
-  forall d,
+  forall theta gamma b i d,
     theta |= gamma /\ (theta, d) |= b -> update theta i d |= after gamma b i.
 Proof.
-  intros d [theta_gamma theta_d_b].
+  intros theta gamma b i d [theta_gamma theta_d_b].
   unfold models. unfold assignment_models_rel.
   split.
     apply after_is_simpl_rel.
