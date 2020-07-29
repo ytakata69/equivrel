@@ -98,7 +98,37 @@ Proof.
   * exact bi.
 Qed.
 
-(* lat *)
+(* trivial *)
+
+Lemma equiv_rel_refl :
+  forall phi,
+  is_equiv_rel phi -> forall x, phi x x.
+Proof.
+  intros phi phi_equiv x.
+  destruct phi_equiv as [phi_refl _].
+  unfold is_reflexive in phi_refl.
+  apply phi_refl.
+Qed.
+
+(* former / lat *)
+
+Lemma elim_former :
+  forall phi i j,
+  former phi (X i) (X j) = phi (X i) (X j).
+Proof.
+  intros phi i j.
+  unfold former.
+  reflexivity.
+Qed.
+
+Lemma elim_lat :
+  forall phi i j,
+  lat phi (X i) (X j) = phi (X' i) (X' j).
+Proof.
+  intros phi i j.
+  unfold lat.
+  reflexivity.
+Qed.
 
 Lemma lat_phi_is_equiv_rel :
   forall (phi : Rel), is_equiv_rel phi -> is_equiv_rel (lat phi).
@@ -217,4 +247,32 @@ Proof.
   unfold rel_between.
   intros i j.
   repeat split; auto.
+Qed.
+
+(* classical logic *)
+
+Definition classic := forall P : Prop, ~ ~ P -> P.
+
+Lemma phi_ji_or_not :
+  classic ->
+  forall (phi : Rel) (i : nat),
+    (exists j, phi (X j) (X' i)) \/ forall j, ~ phi (X j) (X' i).
+Proof.
+  intros Classic.
+  intros phi i.
+  apply Classic.
+  intros H. apply H. right.
+  intros j p. apply H. left.
+  exists j. assumption.
+Qed.
+
+Lemma contrapositive :
+  classic ->
+  forall P Q : Prop, (~ P -> ~ Q) -> Q -> P.
+Proof.
+  intros Classic.
+  intros P Q npnq q.
+  apply Classic.
+  intros np.
+  apply npnq. assumption. assumption.
 Qed.

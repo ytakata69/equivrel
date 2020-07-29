@@ -1,15 +1,13 @@
 Require Import equiv.
 
-Parameter b : guard.
-Parameter i : nat.
-Parameter gamma : Rel.
-Parameter gamma_equiv : is_equiv_rel gamma.
-
 (* "after" is an equivalence relation *)
 
 Lemma after_is_reflexive :
-  is_reflexive (after gamma b i).
+  forall gamma b i,
+    is_equiv_rel gamma ->
+    is_reflexive (after gamma b i).
 Proof.
+  intros gamma b i gamma_equiv.
   unfold is_reflexive.
   intros x.
   case x; intros i0.
@@ -26,8 +24,11 @@ Proof.
 Qed.
 
 Lemma after_is_symmetric :
-  is_symmetric (after gamma b i).
+  forall gamma b i,
+    is_equiv_rel gamma ->
+    is_symmetric (after gamma b i).
 Proof.
+  intros gamma b i gamma_equiv.
   unfold is_symmetric.
   intros x y Ha.
   case x, y.
@@ -71,9 +72,12 @@ Proof.
 Qed.
 
 Lemma after_is_transitive :
-  gamma |= b -> is_transitive (after gamma b i).
+  forall gamma b i,
+    is_equiv_rel gamma ->
+    gamma |= b ->
+    is_transitive (after gamma b i).
 Proof.
-  intros gamma_b.
+  intros gamma b i gamma_equiv gamma_b.
   unfold is_transitive.
   intros x y z [Haxy Hayz].
   case x, y, z.
@@ -158,17 +162,22 @@ Proof.
 Qed.
 
 Lemma after_is_equiv_rel :
-  gamma |= b -> is_equiv_rel (after gamma b i).
+  forall gamma b i,
+    is_equiv_rel gamma ->
+    gamma |= b ->
+    is_equiv_rel (after gamma b i).
 Proof.
-  intros gamma_b.
+  intros gamma b i gamma_equiv gamma_b.
   unfold is_equiv_rel.
   split.
-    apply after_is_reflexive.
+    apply after_is_reflexive; apply gamma_equiv.
   split.
-    apply after_is_symmetric.
-    apply after_is_transitive. assumption.
+    apply after_is_symmetric; apply gamma_equiv.
+    apply after_is_transitive. apply gamma_equiv.
+    assumption.
 Qed.
 
+(* others *)
 
 Lemma after_is_simpl_rel : (* a relation over (X i) *)
   forall gamma b i,

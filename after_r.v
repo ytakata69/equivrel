@@ -1,4 +1,5 @@
 Require Import equiv.
+Require Import register_type after.
 
 Parameter b : guard.
 Parameter phi : Rel.
@@ -220,49 +221,74 @@ Proof.
     assumption.
 Qed.
 
-
-Lemma elim_former :
-  forall phi i j,
-  former phi (X i) (X j) = phi (X i) (X j).
+Lemma lat_phi_after :
+  forall phi phi' b i,
+  is_equiv_rel phi ->
+  lat phi |= b ->
+  afterR phi b i phi' ->
+    lat phi' = after (lat phi) b i.
 Proof.
-  intros phi i j.
-  unfold former.
-  reflexivity.
-Qed.
-
-Lemma elim_lat :
-  forall phi i j,
-  lat phi (X i) (X j) = phi (X' i) (X' j).
-Proof.
-  intros phi i j.
-  unfold lat.
-  reflexivity.
-Qed.
-
-Definition classic := forall P : Prop, ~ ~ P -> P.
-
-Lemma phi_ji_or_not :
-  classic ->
-  forall (phi : Rel) (i : nat),
-    (exists j, phi (X j) (X' i)) \/ forall j, ~ phi (X j) (X' i).
-Proof.
-  intros Classic.
-  intros phi i.
-  apply Classic.
-  intros H. apply H. right.
-  intros j p. apply H. left.
-  exists j. assumption.
-Qed.
-
-Lemma contrapositive :
-  classic ->
-  forall P Q : Prop, (~ P -> ~ Q) -> Q -> P.
-Proof.
-  intros Classic.
-  intros P Q npnq q.
-  apply Classic.
-  intros np.
-  apply npnq. assumption. assumption.
+  intros phi phi' b i phi_equiv lat_phi_b phi'_afterR.
+  destruct phi'_afterR as [fo [la [Ha Ha']]].
+  apply rel_extensionality.
+  unfold lat; unfold after.
+  case x, y; try reflexivity.
+- case_eq (i0 =? i); case_eq (i1 =? i); intros i1i i0i.
++ apply beq_nat_true in i0i;
+  apply beq_nat_true in i1i.
+  rewrite i0i; rewrite i1i.
+  split; intros H.
+* right; reflexivity.
+* rewrite <- elim_lat.
+  rewrite la.
+  assert (after_eq: is_equiv_rel (after (lat phi) b i)).
+  { apply (after_is_equiv_rel (lat phi) b i).
+  - apply lat_phi_is_equiv_rel. assumption.
+  - assumption.
+  }
+  apply (equiv_rel_refl (after (lat phi) b i)).
+  assumption.
++ apply beq_nat_true in i0i.
+  rewrite i0i.
+  split; intros H.
+* rewrite <- elim_lat in H.
+  rewrite la in H.
+  unfold after in H.
+  rewrite <- beq_nat_refl in H.
+  exact H.
+* rewrite <- elim_lat.
+  rewrite la.
+  unfold after.
+  rewrite <- beq_nat_refl.
+  exact H.
++ apply beq_nat_true in i1i.
+  rewrite i1i.
+  split; intros H.
+* rewrite <- elim_lat in H.
+  rewrite la in H.
+  unfold after in H.
+  rewrite i0i in H.
+  rewrite <- beq_nat_refl in H.
+  exact H.
+* rewrite <- elim_lat.
+  rewrite la.
+  unfold after.
+  rewrite i0i.
+  rewrite <- beq_nat_refl.
+  exact H.
++ split; intros H.
+* rewrite <- elim_lat in H.
+  rewrite la in H.
+  unfold after in H.
+  rewrite i0i in H; rewrite i1i in H.
+  rewrite elim_lat in H.
+  exact H.
+* rewrite <- elim_lat.
+  rewrite la.
+  unfold after.
+  rewrite i0i; rewrite i1i.
+  rewrite elim_lat.
+  exact H.
 Qed.
 
 Lemma afterR_implies_deriv :
