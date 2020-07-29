@@ -1,16 +1,14 @@
 Require Import equiv.
 Require Import register_type after.
 
-Parameter b : guard.
-Parameter phi : Rel.
-Parameter phi_equiv : is_equiv_rel phi.
-
 Lemma afterR_well_defined :
-  lat phi |= b -> forall j,
+  forall phi b,
+    is_equiv_rel phi -> lat phi |= b ->
+  forall j,
     ~((exists l1, phi (X j) (X' l1) /\ b l1) /\
        exists l2, ~(phi (X j) (X' l2) <-> b l2)).
 Proof.
-  intros lat_phi_b j.
+  intros phi b phi_equiv lat_phi_b j.
   destruct phi_equiv as [eqref [eqsym eqtran]].
   intros [[l1 [pjl1 bl1]] [l2 H2]].
   apply lat_phi_b in bl1.
@@ -27,11 +25,13 @@ Qed.
 
 (* another representation of the above lemma *)
 Lemma afterR_well_defined'1 :
-  lat phi |= b -> forall j,
+  forall phi b,
+    is_equiv_rel phi -> lat phi |= b ->
+  forall j,
     (exists l1, phi (X j) (X' l1) /\ b l1) ->
      forall l2, phi (X j) (X' l2) <-> b l2.
 Proof.
-  intros lat_phi_b j.
+  intros phi b phi_equiv lat_phi_b j.
   intros el1 l2.
   destruct phi_equiv as [_ [eqsym eqtran]].
   destruct el1 as [l1 [pjl1 bl1]].
@@ -47,11 +47,13 @@ Proof.
 Qed.
 
 Lemma afterR_well_defined'2 :
-  lat phi |= b -> forall j,
+   forall phi b,
+    is_equiv_rel phi -> lat phi |= b ->
+  forall j,
     (exists l1, ~ (phi (X j) (X' l1) <-> b l1)) ->
      forall l2, ~ (phi (X j) (X' l2) /\ b l2).
 Proof.
-  intros lat_phi_b j.
+  intros phi b phi_equiv lat_phi_b j.
   intros el1 l2 [pjl2 bl2].
   destruct phi_equiv as [_ [eqsym eqtran]].
   apply lat_phi_b in bl2.
@@ -68,16 +70,13 @@ Proof.
     auto.
 Qed.
 
-Parameter theta theta' : assignment.
-Parameter phi' : Rel.
-Parameter phi'_equiv : is_equiv_rel phi'.
-
 Lemma afterR_exists_core' :
-  forall d : D, (theta, d) |= b ->
+  forall (theta theta' : assignment) d b,
+    (theta, d) |= b ->
     forall j l, (theta' j = theta l /\ b l -> theta' j = d) /\
              (~ (theta' j = theta l <-> b l) -> theta' j <> d).
 Proof.
-  intros d theta_d_b.
+  intros theta theta' d b theta_d_b.
   intros j l.
   split.
   - intros [theta_jl bl].

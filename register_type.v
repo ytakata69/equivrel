@@ -130,6 +130,19 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma former_is_simpl_rel :
+  forall phi, is_simpl_rel (former phi).
+Proof.
+  intros phi.
+  unfold is_simpl_rel; unfold former.
+  intros x y.
+  case x, y.
+  - apply I.
+  - split; intros H; assumption.
+  - split; intros H; assumption.
+  - split; intros H; assumption.
+Qed.
+
 Lemma lat_phi_is_equiv_rel :
   forall (phi : Rel), is_equiv_rel phi -> is_equiv_rel (lat phi).
 Proof.

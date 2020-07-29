@@ -1,30 +1,13 @@
 Require Import equiv.
-
-Parameter b : guard.
-Parameter theta theta' : assignment.
-Parameter phi : Rel.
-Parameter phi_equiv : is_equiv_rel phi.
-Parameter theta_phi : (theta', theta) |= phi.
-
-Lemma former_is_simpl_rel :
-  forall phi, is_simpl_rel (former phi).
-Proof.
-  intros phi.
-  unfold is_simpl_rel; unfold former.
-  intros x y.
-  case x, y.
-  - apply I.
-  - split; intros H; assumption.
-  - split; intros H; assumption.
-  - split; intros H; assumption.
-Qed.
+Require Import register_type.
 
 Lemma updated_assignment_models_former_afterL :
-  forall j d,
+  forall phi theta theta' j d,
+    (theta', theta) |= phi ->
     (theta', d) |= inv phi j ->
     update theta' j d |= former (afterL phi j).
 Proof.
-  intros j d theta'_d_b.
+  intros phi theta theta' j d theta_phi theta'_d_b.
   unfold models; unfold assignment_models_rel.
   split.
     apply former_is_simpl_rel.

@@ -3,11 +3,9 @@ Require Import register_type.
 Require Import after after_r after_l.
 
 Parameter A B : V.
-Parameter phi : Rel.
-Axiom phi_equiv : is_equiv_rel phi.
 
 Lemma derivG_implies_derivG'_1 :
-  forall gamma gamma' theta1 theta2 theta'1,
+  forall gamma gamma' phi theta1 theta2 theta'1,
     is_simpl_rel gamma ->
     derivG ((A, gamma), theta1) None ((B, gamma'), theta2) ->
     theta1 |= gamma ->
@@ -17,7 +15,7 @@ Lemma derivG_implies_derivG'_1 :
     (theta'1, theta2) |= phi' /\
     derivG' ((A, phi), theta'1) None ((B, phi'), theta'1).
 Proof.
-  intros gamma gamma' theta1 theta2 theta'1.
+  intros gamma gamma' phi theta1 theta2 theta'1.
   intros ga_simpl derivGAB th1_ga theta_phi.
   unfold derivG in derivGAB.
 
@@ -80,7 +78,7 @@ Proof.
 Qed.
 
 Lemma derivG_implies_derivG'_2 :
-  forall gamma theta1 theta'1 d,
+  forall gamma phi theta1 theta'1 d,
     is_simpl_rel gamma ->
     derivG ((A, gamma), theta1) (Some d) ((B, gamma), theta1) ->
     theta1 |= gamma ->
@@ -89,7 +87,7 @@ Lemma derivG_implies_derivG'_2 :
     (theta'2, theta1) |= phi' /\
     derivG' ((A, phi), theta'1) (Some d) ((B, phi'), theta'2).
 Proof.
-  intros gamma theta1 theta'1 d;
+  intros gamma phi theta1 theta'1 d;
   intros ga_simpl derivGAB th1_ga theta_phi.
   unfold derivG in derivGAB.
 
