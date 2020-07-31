@@ -266,17 +266,14 @@ Qed.
 
 Definition classic := forall P : Prop, ~ ~ P -> P.
 
-Lemma phi_ji_or_not :
-  classic ->
-  forall (phi : Rel) (i : nat),
-    (exists j, phi (X j) (X' i)) \/ forall j, ~ phi (X j) (X' i).
+Lemma excluded_middle :
+  classic -> forall P : Prop, P \/ ~P.
 Proof.
-  intros Classic.
-  intros phi i.
+  intros Classic P.
   apply Classic.
-  intros H. apply H. right.
-  intros j p. apply H. left.
-  exists j. assumption.
+  intros npnp.
+  apply npnp; right; intros p.
+  apply npnp; left; exact p.
 Qed.
 
 Lemma contrapositive :
@@ -288,4 +285,31 @@ Proof.
   apply Classic.
   intros np.
   apply npnq. assumption. assumption.
+Qed.
+
+Lemma not_exists_iff_forall_not :
+  forall T : Type,
+  forall P : T -> Prop,
+    ~ (exists x, P x) <-> forall x, ~ P x.
+Proof.
+  intros T P.
+  split; intros H.
+- intros x px.
+  apply H.
+  exists x; exact px.
+- intros [x px].
+  apply (H x); exact px.
+Qed.
+
+Lemma phi_ji_or_not :
+  classic ->
+  forall (phi : Rel) (i : nat),
+    (exists j, phi (X j) (X' i)) \/ forall j, ~ phi (X j) (X' i).
+Proof.
+  intros Classic phi i.
+  assert (H: ~(exists j, phi (X j) (X' i)) <-> forall j, ~phi (X j) (X' i)).
+  { apply (not_exists_iff_forall_not _ (fun j => phi (X j) (X' i))). }
+  rewrite <- H.
+  apply excluded_middle.
+  apply Classic.
 Qed.
