@@ -2,12 +2,12 @@ Require Import equiv.
 Require Import register_type.
 
 Lemma updated_assignment_models_former_afterL :
-  forall phi theta theta' j d,
-    (theta', theta) |= phi ->
+  forall phi theta' j d,
+    theta' |= former phi ->
     (theta', d) |= inv phi j ->
     update theta' j d |= former (afterL phi j).
 Proof.
-  intros phi theta theta' j d theta_phi theta'_d_b.
+  intros phi theta' j d theta_phi theta'_d_b.
   unfold models; unfold assignment_models_rel.
   split.
     apply former_is_simpl_rel.
@@ -178,4 +178,131 @@ Proof.
       apply theta_phi in H.
       assumption.
     }
+Qed.
+
+Lemma afterL_is_equiv_rel :
+forall phi j,
+is_equiv_rel phi ->
+is_equiv_rel (afterL phi j).
+Proof.
+  intros phi j [phi_refl [phi_sym phi_tran]].
+  repeat split.
+- unfold is_reflexive.
+  intros x.
+  unfold afterL; unfold after.
+  case x.
++ intros i.
+  case_eq (i =? j); intros ij.
+* right; apply beq_nat_true; exact ij.
+* unfold former.
+  apply phi_refl.
++ intros i.
+  apply phi_refl.
+- unfold is_symmetric.
+  intros x y.
+  unfold afterL; unfold after.
+  case x, y.
++ case_eq (i =? j); case_eq (i0 =? j); intros i0j; intros ij.
+* intros _.
+  right.
+  apply beq_nat_true; assumption.
+* intros [H | H].
+    assumption.
+  apply beq_nat_false in i0j; contradiction.
+* auto.
+* unfold former.
+  apply phi_sym.
++ case_eq (i =? j); intros ij; auto.
++ case_eq (i0 =? j); intros i0j; auto.
++ apply phi_sym.
+
+- unfold is_transitive.
+  intros x y z.
+  case x, y, z;
+  unfold afterL; unfold after.
++ case_eq (i =? j); case_eq (i0 =? j); intros i0j; intros ij.
+* intros [_ [H | H]]; auto.
+* case_eq (i1 =? j); intros i1j.
+-- intros _.
+  right; apply beq_nat_true; assumption.
+-- intros [[H1 | H1] H2].
+++ unfold inv in H1.
+  unfold former in H2.
+  apply phi_sym in H2.
+  left.
+  unfold inv.
+  apply (phi_tran _ (X i0) _).
+  split; assumption.
+++ apply beq_nat_false in i0j. contradiction.
+* case_eq (i1 =? j); intros i1j.
+-- intros [H _]; assumption.
+-- unfold inv; unfold former.
+  intros [H1 [H2 | H2]].
+++ apply phi_sym in H2.
+  apply (phi_tran _ (X' j) _); auto.
+++ apply beq_nat_false in i1j. contradiction.
+* case_eq (i1 =? j); intros i1j.
+-- unfold inv; unfold former.
+  intros [H1 H2].
+  apply (phi_tran _ (X i0) _); auto.
+-- unfold former.
+  apply phi_tran.
++ case_eq (i =? j); case_eq (i0 =? j); intros i0j; intros ij.
+* intros [[H1 | H1] H2]; assumption.
+* intros [[H1 | H1] H2].
+-- unfold inv in H1.
+  apply phi_sym in H1.
+  apply (phi_tran _ (X i0) _).
+  split; assumption.
+-- apply beq_nat_false in i0j. contradiction.
+* unfold inv.
+  apply phi_tran.
+* unfold former.
+  apply phi_tran.
++ case_eq (i =? j); case_eq (i1 =? j); intros i1j; intros ij.
+* intros _.
+  right; apply beq_nat_true; assumption.
+* intros [H1 H2].
+  left.
+  unfold inv.
+  apply phi_sym.
+  apply (phi_tran _ (X' i0) _).
+  split; assumption.
+* intros [H1 H2].
+  apply phi_sym in H2.
+  unfold inv.
+  apply (phi_tran _ (X' i0) _).
+  split; assumption.
+* unfold former.
+  apply phi_tran.
++ case_eq (i =? j); intros ij; apply phi_tran.
++ case_eq (i0 =? j); case_eq (i1 =? j); intros i1j; intros i0j.
+* intros [H1 _]; assumption.
+* intros [H1 [H2 | H2]].
+-- unfold inv in H2.
+  apply phi_sym.
+  apply (phi_tran _ (X' j) _).
+  split; assumption.
+-- apply beq_nat_false in i1j. contradiction.
+* intros [H1 H2].
+  unfold inv in H2.
+  apply phi_sym.
+  apply (phi_tran _ (X i0) _).
+  split; assumption.
+* unfold former.
+  apply phi_tran.
++ case_eq (i0 =? j); intros i0j.
+* intros [H1 H2].
+  apply phi_sym in H1.
+  apply (phi_tran _ (X' j) _).
+  split; assumption.
+* apply phi_tran.
++ case_eq (i1 =? j); intros i1j.
+* intros [H1 H2].
+  apply phi_sym in H2.
+  apply phi_sym.
+  apply (phi_tran _ (X' i0) _).
+  split; assumption.
+* apply phi_tran.
++ apply phi_tran.
 Qed.
