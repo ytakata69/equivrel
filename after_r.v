@@ -218,6 +218,14 @@ Proof.
     rewrite li in phi'_jl.
     apply theta_phi.
     assumption.
+  - intros H0.
+    apply theta_phi'.
+    apply theta_phi' in H0.
+    symmetry; assumption.
+  - intros H0.
+    apply theta_phi'.
+    apply theta_phi' in H0.
+    symmetry; assumption.
 Qed.
 
 Lemma lat_phi_after :
@@ -305,7 +313,7 @@ Proof.
   intros phi_equiv phi'_equiv theta_phi lat_phi_b;
   intros i phi'_in_after.
   unfold afterR in phi'_in_after.
-  destruct phi'_in_after as [fo [la [Hi Ho]]].
+  destruct phi'_in_after as [fo [la [Hi [Ho Htran]]]].
   destruct phi_equiv  as [_ [phi_sym _]].
   destruct phi'_equiv as [phi'_refl [phi'_sym phi'_tran]].
   assert (phi_phi': forall i j, phi (X i) (X j) <-> phi' (X i) (X j)).

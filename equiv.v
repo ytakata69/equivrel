@@ -69,7 +69,8 @@ Definition afterR (phi : Rel) (b : guard) (i : nat) : Rel -> Prop :=
     lat phi' = after (lat phi) b i /\
     (forall j l, (phi (X j) (X' l) /\ b l -> phi' (X j) (X' i)) /\
               (~ (phi (X j) (X' l) <-> b l) -> ~ phi' (X j) (X' i))) /\
-    forall j l, l <> i -> (phi (X j) (X' l) <-> phi' (X j) (X' l)).
+    (forall j l, l <> i -> (phi (X j) (X' l) <-> phi' (X j) (X' l))) /\
+    (forall j l, phi' (X j) (X' l) <-> phi' (X' l) (X j)).
 
 Definition afterL (phi : Rel) (i : nat) : Rel :=
   fun xl xj : register =>
