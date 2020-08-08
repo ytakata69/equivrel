@@ -21,6 +21,7 @@ Inductive ltl :=
   | neg : ltl_atom -> ltl  (* a negative literal *)
   | X : ltl -> ltl
   | F : ltl -> ltl
+  | G : ltl -> ltl
   | STORE : register -> ltl -> ltl
   | OR  : ltl -> ltl -> ltl
   | AND : ltl -> ltl -> ltl
@@ -65,6 +66,7 @@ Fixpoint models
   | neg atom => ~ models_atom sigma i v atom
   | X phi' => models sigma (S i) v phi'
   | F phi' => exists j : nat, i <= j /\ models sigma j v phi'
+  | G phi' => forall j : nat, i <= j -> models sigma j v phi'
   | (↓ r, phi') => models sigma i (update v r (snd (sigma i))) phi'
   | phi1 .\/ phi2 => models sigma i v phi1 \/ models sigma i v phi2
   | phi1 ./\ phi2 => models sigma i v phi1 /\ models sigma i v phi2
@@ -94,6 +96,7 @@ Fixpoint contains_match
   | pos _  | neg _ => False
   | X phi'         => contains_match r phi'
   | F phi'         => contains_match r phi'
+  | G phi'         => contains_match r phi'
   | (↓ r', phi')   => contains_match r phi'
   | phi1 .\/ phi2  => contains_match r phi1 \/ contains_match r phi2
   | phi1 ./\ phi2  => contains_match r phi1 \/ contains_match r phi2
@@ -106,6 +109,7 @@ Fixpoint contains_store
   | pos _  | neg _ => False
   | X phi'         => contains_store r phi'
   | F phi'         => contains_store r phi'
+  | G phi'         => contains_store r phi'
   | (↓ r', phi')   => r' = r \/ contains_store r phi'
   | phi1 .\/ phi2  => contains_store r phi1 /\ contains_store r phi2
   | phi1 ./\ phi2  => contains_store r phi1 /\ contains_store r phi2
@@ -382,6 +386,21 @@ Proof.
 - assert (Hcon': ~ contains_match r phi).
   { intros H; apply Hcon; apply H. }
   intros sigma i v d.
+  split; intros H.
++ intros j ij.
+  assert (IH := (IHphi Hcon' sigma j v d));
+  clear IHphi Hcon.
+  apply IH.
+  apply (H j ij).
++ intros j ij.
+  assert (IH := (IHphi Hcon' sigma j v d));
+  clear IHphi Hcon.
+  apply IH.
+  apply (H j ij).
+
+- assert (Hcon': ~ contains_match r phi).
+  { intros H; apply Hcon; apply H. }
+  intros sigma i v d.
   case_eq (r0 =? r); intros r0r.
 + assert (Hup: forall d', update (update v r d') r d' = update (update v r d) r d').
   {
@@ -496,6 +515,21 @@ Proof.
   split.
     assumption.
   apply IH; assumption.
+
+- assert (Hcon': contains_store r phi).
+  { apply Hcon. }
+  intros sigma i v d.
+  split; intros H.
++ intros j ij.
+  assert (IH := (IHphi Hcon' sigma j v d));
+  clear IHphi Hcon.
+  apply IH.
+  apply (H j ij).
++ intros j ij.
+  assert (IH := (IHphi Hcon' sigma j v d));
+  clear IHphi Hcon.
+  apply IH.
+  apply (H j ij).
 
 - assert (Hcon': r0 = r \/ contains_store r phi).
   { apply Hcon. }
@@ -647,6 +681,11 @@ Proof.
   assumption.
 + apply (redundant_STORE_core _ _ Hcon _ _ v _).
   assumption.
+- split; intros H.
++ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE_core _ _ Hcon _ _ v _).
+  assumption.
 Qed.
 
 Lemma redundant_STORE' :
@@ -662,6 +701,11 @@ Proof.
   contradiction.
 - unfold contains_store in Hcon.
   contradiction.
+- split; intros H.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
+  assumption.
 - split; intros H.
 + apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
   assumption.
