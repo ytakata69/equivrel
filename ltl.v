@@ -212,6 +212,42 @@ Proof.
 Qed.
 
 
+Lemma F_equals_phi_or_XF :
+  forall phi,
+    (F phi) = (phi .\/ X (F phi)).
+Proof.
+  intros phi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [j [ij H]].
+  assert (Hj: i = j \/ S i <= j).
+  {
+    destruct ij.
+  - left; reflexivity.
+  - right; apply le_n_S; assumption.
+  }
+  destruct Hj as [Hj | Hj].
++ left.
+  rewrite Hj.
+  assumption.
++ right.
+  exists j.
+  split; assumption.
+- destruct H as [H | [j [ij H]]].
++ exists i.
+  split.
+    trivial.
+  assumption.
++ exists j.
+  split.
+* apply le_S_n.
+  apply Nat.le_le_succ_r.
+  assumption.
+* assumption.
+Qed.
+
+
 Lemma F_is_idempotent :
   forall phi, (F (F phi)) = (F phi).
 Proof.
