@@ -150,13 +150,10 @@ Proof.
   intros phi1 phi2.
   apply ltl_extensionality.
   intros sigma i v.
-  split; intros H.
-- destruct H as [H | H].
-+ left; assumption.
-+ right; assumption.
-- destruct H as [H | H].
-+ left; assumption.
-+ right; assumption.
+  split; intros H;
+  destruct H as [H | H];
+  (left; assumption) ||
+  (right; assumption).
 Qed.
 
 Lemma distr_F_over_OR :
@@ -175,12 +172,9 @@ Proof.
   exists j.
   split; assumption.
 - destruct H as [H | H];
-  destruct H as [j [ij H]].
-+ unfold models.
-  exists j.
-  split; auto.
-+ unfold models.
-  exists j.
+  destruct H as [j [ij H]];
+  unfold models;
+  exists j;
   split; auto.
 Qed.
 
@@ -191,10 +185,8 @@ Proof.
   intros phi1 phi2 r.
   apply ltl_extensionality.
   intros sigma i v.
-  split; intros H.
-- destruct H as [H | H];
-  unfold models; auto.
-- destruct H as [H | H];
+  split; intros H;
+  destruct H as [H | H];
   unfold models; auto.
 Qed.
 
@@ -456,23 +448,19 @@ Proof.
   intros Hcon.
   induction phi.
 - intros sigma i v d.
-  destruct l.
-+ reflexivity.
+  destruct l; try reflexivity.
 + unfold models; unfold models_atom.
   unfold update.
   apply Nat.eqb_neq in Hcon.
   rewrite Hcon.
   reflexivity.
-+ reflexivity.
 - intros sigma i v d.
-  destruct l.
-+ reflexivity.
+  destruct l; try reflexivity.
 + unfold models; unfold models_atom.
   unfold update.
   apply Nat.eqb_neq in Hcon.
   rewrite Hcon.
   reflexivity.
-+ reflexivity.
 
 - assert (Hcon': ~ contains_match r phi).
   { intros H; apply Hcon; apply H. }
@@ -485,35 +473,21 @@ Proof.
 - assert (Hcon': ~ contains_match r phi).
   { intros H; apply Hcon; apply H. }
   intros sigma i v d.
-  split; intros H.
-+ destruct H as [j [ij H]].
+  split; intros H;
+  destruct H as [j [ij H]];
   assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  exists j.
-  split.
-    assumption.
-  apply IH; assumption.
-+ destruct H as [j [ij H]].
-  assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  exists j.
-  split.
-    assumption.
-  apply IH; assumption.
+  exists j;
+  split;
+   assumption ||
+  (apply IH; assumption).
 
 - assert (Hcon': ~ contains_match r phi).
   { intros H; apply Hcon; apply H. }
   intros sigma i v d.
-  split; intros H.
-+ intros j ij.
+  split; intros H;
+  intros j ij;
   assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  apply IH.
-  apply (H j ij).
-+ intros j ij.
-  assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  apply IH.
+  apply IH;
   apply (H j ij).
 
 - assert (Hcon': ~ contains_match r phi).
@@ -541,14 +515,12 @@ Proof.
     apply valuation_extensionality.
     intros r1.
     unfold update.
-    case_eq (r1 =? r); case_eq (r1 =? r0); intros r1r0 r1r.
+    case_eq (r1 =? r); case_eq (r1 =? r0); intros r1r0 r1r;
+    try reflexivity.
   - apply beq_nat_true in r1r0.
     apply beq_nat_true in r1r.
     rewrite r1r0 in r1r.
     elim H; assumption.
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
   }
   apply beq_nat_false in r0r.
   assert (IH := (IHphi Hcon' sigma i (update v r0 (snd (sigma i))) d));
@@ -565,13 +537,10 @@ Proof.
   assert (IH1 := (IHphi1 Hcon1 sigma i v d));
   assert (IH2 := (IHphi2 Hcon2 sigma i v d));
   clear IHphi1 IHphi2 Hcon.
-  split; intros H.
-+ destruct H as [H | H].
-* left; apply IH1; apply H.
-* right; apply IH2; apply H.
-+ destruct H as [H | H].
-* left; apply IH1; apply H.
-* right; apply IH2; apply H.
+  split; intros H;
+  destruct H as [H | H];
+  (left;  apply IH1; apply H) ||
+  (right; apply IH2; apply H).
 
 - assert (Hcon': ~ (contains_match r phi1 \/ contains_match r phi2)).
   { intros H; apply Hcon; apply H. }
@@ -581,15 +550,11 @@ Proof.
   assert (IH1 := (IHphi1 Hcon1 sigma i v d));
   assert (IH2 := (IHphi2 Hcon2 sigma i v d));
   clear IHphi1 IHphi2 Hcon.
-  split; intros H.
-+ destruct H as [H1 H2].
-  split.
-* apply IH1; apply H1.
-* apply IH2; apply H2.
-+ destruct H as [H1 H2].
-  split.
-* apply IH1; apply H1.
-* apply IH2; apply H2.
+  split; intros H;
+  destruct H as [H1 H2];
+  split;
+  (apply IH1; apply H1) ||
+  (apply IH2; apply H2).
 Qed.
 
 Lemma redundant_STORE'_core :
@@ -618,36 +583,22 @@ Proof.
 - assert (Hcon': contains_store r phi).
   { apply Hcon. }
   intros sigma i v d.
-  split; intros H.
-+ destruct H as [j [ij H]].
+  split; intros H;
+  destruct H as [j [ij H]];
   assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  exists j.
-  split.
-    assumption.
-  apply IH; assumption.
-+ destruct H as [j [ij H]].
-  assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  exists j.
-  split.
-    assumption.
-  apply IH; assumption.
+  exists j;
+  split;
+   assumption ||
+  (apply IH; assumption).
 
 - assert (Hcon': contains_store r phi).
   { apply Hcon. }
   intros sigma i v d.
-  split; intros H.
-+ intros j ij.
-  assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  apply IH.
-  apply (H j ij).
-+ intros j ij.
-  assert (IH := (IHphi Hcon' sigma j v d));
-  clear IHphi Hcon.
-  apply IH.
-  apply (H j ij).
+  split; intros H;
+  (intros j ij;
+   assert (IH := (IHphi Hcon' sigma j v d));
+   apply IH;
+   apply (H j ij)).
 
 - assert (Hcon': r0 = r \/ contains_store r phi).
   { apply Hcon. }
@@ -689,15 +640,13 @@ Proof.
     apply valuation_extensionality.
     intros r1.
     unfold update.
-    case_eq (r1 =? r); case_eq (r1 =? r0); intros r1r0 r1r.
+    case_eq (r1 =? r); case_eq (r1 =? r0); intros r1r0 r1r;
+    try reflexivity.
   - apply beq_nat_true in r1r0;
     apply beq_nat_true in r1r.
     symmetry in r1r0;
     rewrite r1r0 in r0r.
     contradiction.
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
   }
   assert (IH := (IHphi Hcon' sigma i (update v r0 (snd (sigma i))) d));
   clear IHphi Hcon.
@@ -718,13 +667,10 @@ Proof.
   assert (IH1 := (IHphi1 Hcon1 sigma i v d));
   assert (IH2 := (IHphi2 Hcon2 sigma i v d));
   clear IHphi1 IHphi2 Hcon.
-  split; intros H.
-+ destruct H as [H | H].
-* left; apply IH1; apply H.
-* right; apply IH2; apply H.
-+ destruct H as [H | H].
-* left; apply IH1; apply H.
-* right; apply IH2; apply H.
+  split; intros H;
+  destruct H as [H | H];
+  (left;  apply IH1; apply H) ||
+  (right; apply IH2; apply H).
 
 - assert (Hcon': contains_store r phi1 /\ contains_store r phi2).
   { apply Hcon. }
@@ -733,15 +679,11 @@ Proof.
   assert (IH1 := (IHphi1 Hcon1 sigma i v d));
   assert (IH2 := (IHphi2 Hcon2 sigma i v d));
   clear IHphi1 IHphi2 Hcon.
-  split; intros H.
-+ destruct H as [H1 H2].
-  split.
-* apply IH1; apply H1.
-* apply IH2; apply H2.
-+ destruct H as [H1 H2].
-  split.
-* apply IH1; apply H1.
-* apply IH2; apply H2.
+  split; intros H;
+  destruct H as [H1 H2];
+  split;
+  (apply IH1; apply H1) ||
+  (apply IH2; apply H2).
 Qed.
 
 
@@ -752,57 +694,9 @@ Proof.
   intros phi r Hcon.
   apply ltl_extensionality.
   intros sigma i v.
-  induction phi.
-
-- destruct l.
-+ reflexivity.
-+ unfold contains_match in Hcon.
-  apply Nat.eqb_neq in Hcon.
-  unfold models; unfold models_atom.
-  unfold update.
-  rewrite Hcon.
-  reflexivity.
-+ reflexivity.
-
-- destruct l.
-+ reflexivity.
-+ unfold contains_match in Hcon.
-  apply Nat.eqb_neq in Hcon.
-  unfold models; unfold models_atom.
-  unfold update.
-  rewrite Hcon.
-  reflexivity.
-+ reflexivity.
-
-- split; intros H.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE_core _ _ Hcon _ _ v _).
+  split; intros H;
+  (apply (redundant_STORE_core _ _ Hcon _ _ v _) in H ||
+   apply (redundant_STORE_core _ _ Hcon _ _ v _));
   assumption.
 Qed.
 
@@ -813,40 +707,8 @@ Proof.
   intros phi r Hcon.
   apply ltl_extensionality.
   intros sigma i v.
-  induction phi.
-
-- unfold contains_store in Hcon.
-  contradiction.
-- unfold contains_store in Hcon.
-  contradiction.
-- split; intros H.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
-  assumption.
-- split; intros H.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
-  assumption.
-+ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
+  split; intros H;
+  (apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H ||
+   apply (redundant_STORE'_core _ _ Hcon _ _ v _));
   assumption.
 Qed.
