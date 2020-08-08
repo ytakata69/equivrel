@@ -95,6 +95,17 @@ Fixpoint contains_match
   | phi1 .\/ phi2  => contains_match r phi1 \/ contains_match r phi2
   end.
 
+Fixpoint contains_store
+  (r : register) (phi : ltl) : Prop
+  :=
+  match phi with
+  | pos _  | neg _ => False
+  | X phi'         => contains_store r phi'
+  | F phi'         => contains_store r phi'
+  | (↓ r', phi')   => r' = r \/ contains_store r phi'
+  | phi1 .\/ phi2  => contains_store r phi1 /\ contains_store r phi2
+  end.
+
 (* equivalent transformations *)
 
 Lemma store_match_equals_tt :
@@ -358,6 +369,127 @@ Proof.
 * right; apply IH2; apply H.
 Qed.
 
+Lemma redundant_STORE'_core :
+  forall r phi,
+    contains_store r phi ->
+    forall sigma i v d,
+      (sigma, i |= v, phi)
+      <-> (sigma, i |= update v r d, phi).
+Proof.
+  intros r phi;
+  intros Hcon.
+  induction phi.
+- unfold contains_store in Hcon.
+  contradiction.
+- unfold contains_store in Hcon.
+  contradiction.
+
+- assert (Hcon': contains_store r phi).
+  { apply Hcon. }
+  intros sigma i v d.
+  assert (IH := (IHphi Hcon' sigma (S i) v d));
+  clear IHphi Hcon.
+  split; intros H;
+  apply IH; apply H.
+
+- assert (Hcon': contains_store r phi).
+  { apply Hcon. }
+  intros sigma i v d.
+  split; intros H.
++ destruct H as [j [ij H]].
+  assert (IH := (IHphi Hcon' sigma j v d));
+  clear IHphi Hcon.
+  exists j.
+  split.
+    assumption.
+  apply IH; assumption.
++ destruct H as [j [ij H]].
+  assert (IH := (IHphi Hcon' sigma j v d));
+  clear IHphi Hcon.
+  exists j.
+  split.
+    assumption.
+  apply IH; assumption.
+
+- assert (Hcon': r0 = r \/ contains_store r phi).
+  { apply Hcon. }
+  assert (Hcon'': r0 = r \/ r0 <> r /\ contains_store r phi).
+  {
+    case_eq (r0 =? r); intros r0r.
+  - left.
+    apply beq_nat_true; assumption.
+  - right.
+    split.
+  + apply beq_nat_false; assumption.
+  + destruct Hcon' as [r0r' | Hcon'].
+  * rewrite Nat.eqb_neq in r0r.
+    contradiction.
+  * assumption.
+  }
+  clear Hcon'.
+  intros sigma i v d.
+  destruct Hcon'' as [r0r | [r0r Hcon']].
++ assert (Hup: forall d', update (update v r d) r d' = update v r d').
+  {
+    intros d'.
+    apply valuation_extensionality.
+    intros r1.
+    unfold update.
+    case (r1 =? r); reflexivity.
+  }
+  rewrite r0r.
+  split; intros H.
+* unfold models.
+  rewrite (Hup (snd (sigma i))).
+  apply H.
+* unfold models.
+  rewrite <- (Hup (snd (sigma i))).
+  apply H.
++ assert (Hup: forall d', update (update v r d) r0 d' = update (update v r0 d') r d).
+  {
+    intros d'.
+    apply valuation_extensionality.
+    intros r1.
+    unfold update.
+    case_eq (r1 =? r); case_eq (r1 =? r0); intros r1r0 r1r.
+  - apply beq_nat_true in r1r0;
+    apply beq_nat_true in r1r.
+    symmetry in r1r0;
+    rewrite r1r0 in r0r.
+    contradiction.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  }
+  assert (IH := (IHphi Hcon' sigma i (update v r0 (snd (sigma i))) d));
+  clear IHphi Hcon.
+  split; intros H.
+* unfold models.
+  rewrite (Hup (snd (sigma i))).
+  apply IH.
+  apply H.
+* unfold models.
+  apply IH.
+  rewrite <- (Hup (snd (sigma i))).
+  apply H.
+
+- assert (Hcon': contains_store r phi1 /\ contains_store r phi2).
+  { apply Hcon. }
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  assert (IH1 := (IHphi1 Hcon1 sigma i v d));
+  assert (IH2 := (IHphi2 Hcon2 sigma i v d));
+  clear IHphi1 IHphi2 Hcon.
+  split; intros H.
++ destruct H as [H | H].
+* left; apply IH1; apply H.
+* right; apply IH2; apply H.
++ destruct H as [H | H].
+* left; apply IH1; apply H.
+* right; apply IH2; apply H.
+Qed.
+
+
 Lemma redundant_STORE :
   forall phi r,
     ~ contains_match r phi -> (↓ r, phi) = phi.
@@ -406,5 +538,40 @@ Proof.
 + apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
   assumption.
 + apply (redundant_STORE_core _ _ Hcon _ _ v _).
+  assumption.
+Qed.
+
+Lemma redundant_STORE' :
+  forall phi r,
+    contains_store r phi -> (↓ r, phi) = phi.
+Proof.
+  intros phi r Hcon.
+  apply ltl_extensionality.
+  intros sigma i v.
+  induction phi.
+
+- unfold contains_store in Hcon.
+  contradiction.
+- unfold contains_store in Hcon.
+  contradiction.
+- split; intros H.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
+  assumption.
+- split; intros H.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
+  assumption.
+- split; intros H.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
+  assumption.
+- split; intros H.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
   assumption.
 Qed.
