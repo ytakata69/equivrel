@@ -67,19 +67,6 @@ Fixpoint models
   | phi1 .\/ phi2 => models sigma i v phi1 \/ models sigma i v phi2
   end.
 
-(*
-Inductive models
-  : data_word -> nat -> valuation -> ltl -> Prop
-  :=
-  | models_pos : forall sigma i v atom,  models_atom sigma i v atom -> models sigma i v  [atom]
-  | models_neg : forall sigma i v atom, ~models_atom sigma i v atom -> models sigma i v ~[atom]
-  | models_X   : forall sigma i v phi, models sigma (S i) v phi -> models sigma i v (X phi)
-  | models_F   : forall sigma i v phi, (exists j, i <= j /\ models sigma j v phi) -> models sigma i v (F phi)
-  | models_ST  : forall sigma i v phi r, models sigma i (update v r (snd (sigma i))) phi -> models sigma i v (↓ r, phi)
-  | models_OR  : forall sigma i v phi1 phi2, models sigma i v phi1 \/ models sigma i v phi2 -> models sigma i v (phi1 .\/ phi2)
-  .
-*)
-
 Notation "'(' sigma ',' i '|=' v ',' phi ')'"
   := (models sigma i v phi).
 
@@ -94,22 +81,6 @@ Axiom valuation_extensionality :
     (forall r, v1 r = v2 r) -> v1 = v2.
 
 (* an auxiliary predicate *)
-(*
-Inductive not_contain_match
-  : register -> ltl -> Prop
-  :=
-  | cm_base1 : forall r r', r' <> r -> not_contain_match r  [↑ r']
-  | cm_base2 : forall r r', r' <> r -> not_contain_match r ~[↑ r']
-  | cm_X : forall phi r, not_contain_match r phi -> not_contain_match r (X phi)
-  | cm_F : forall phi r, not_contain_match r phi -> not_contain_match r (F phi)
-  | cm_ST : forall phi r r', not_contain_match r phi ->
-                             not_contain_match r (↓ r', phi)
-  | cm_OR : forall phi1 phi2 r,
-            not_contain_match r phi1 ->
-            not_contain_match r phi2 ->
-            not_contain_match r (phi1 .\/ phi2)
-  .
-*)
 
 Fixpoint contains_match
   (r : register) (phi : ltl) : Prop
