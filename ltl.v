@@ -22,12 +22,14 @@ Inductive ltl :=
   | X : ltl -> ltl
   | F : ltl -> ltl
   | STORE : register -> ltl -> ltl
-  | OR : ltl -> ltl -> ltl
+  | OR  : ltl -> ltl -> ltl
+  | AND : ltl -> ltl -> ltl
   .
 
 Notation "'↓' r , phi" := (STORE r phi) (at level 200).
 Notation "'↑' r" := (MATCH r) (at level 75).
-Notation "a '.\/' b" := (OR a b) (at level 85, right associativity).
+Notation "a '.\/' b" := (OR  a b) (at level 85, right associativity).
+Notation "a './\' b" := (AND a b) (at level 75, right associativity).
 Notation  "'[' a ']'" := (pos a).
 Notation "'~[' a ']'" := (neg a).
 
@@ -65,6 +67,7 @@ Fixpoint models
   | F phi' => exists j : nat, i <= j /\ models sigma j v phi'
   | (↓ r, phi') => models sigma i (update v r (snd (sigma i))) phi'
   | phi1 .\/ phi2 => models sigma i v phi1 \/ models sigma i v phi2
+  | phi1 ./\ phi2 => models sigma i v phi1 /\ models sigma i v phi2
   end.
 
 Notation "'(' sigma ',' i '|=' v ',' phi ')'"
@@ -93,6 +96,7 @@ Fixpoint contains_match
   | F phi'         => contains_match r phi'
   | (↓ r', phi')   => contains_match r phi'
   | phi1 .\/ phi2  => contains_match r phi1 \/ contains_match r phi2
+  | phi1 ./\ phi2  => contains_match r phi1 \/ contains_match r phi2
   end.
 
 Fixpoint contains_store
@@ -104,9 +108,10 @@ Fixpoint contains_store
   | F phi'         => contains_store r phi'
   | (↓ r', phi')   => r' = r \/ contains_store r phi'
   | phi1 .\/ phi2  => contains_store r phi1 /\ contains_store r phi2
+  | phi1 ./\ phi2  => contains_store r phi1 /\ contains_store r phi2
   end.
 
-(* equivalent transformations *)
+(* cancellation *)
 
 Lemma store_match_equals_tt :
   forall r : nat, (↓ r, [↑ r]) = [tt].
@@ -132,6 +137,7 @@ Proof.
   split; intros H; contradiction.
 Qed.
 
+(* distribution over OR *)
 
 Lemma distr_X_over_OR :
   forall phi1 phi2,
@@ -188,6 +194,33 @@ Proof.
   unfold models; auto.
 Qed.
 
+(* distribution over AND *)
+
+Lemma distr_X_over_AND :
+  forall phi1 phi2,
+    (X (phi1 ./\ phi2)) = (X phi1 ./\ X phi2).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H;
+  destruct H as [H1 H2];
+  split; assumption.
+Qed.
+
+Lemma distr_STORE_over_AND :
+  forall phi1 phi2 r,
+    (↓ r, (phi1 ./\ phi2)) = ((↓ r, phi1) ./\ (↓ r, phi2)).
+Proof.
+  intros phi1 phi2 r.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H;
+  destruct H as [H1 H2];
+  split; assumption.
+Qed.
+
+(* equivalent transformations *)
 
 Lemma FX_equals_XF :
   forall phi, (F (X phi)) = (X (F phi)).
@@ -210,7 +243,6 @@ Proof.
     assumption.
   auto. (* i < j *)
 Qed.
-
 
 Lemma F_equals_phi_or_XF :
   forall phi,
@@ -246,7 +278,6 @@ Proof.
   assumption.
 * assumption.
 Qed.
-
 
 Lemma F_is_idempotent :
   forall phi, (F (F phi)) = (F phi).
@@ -290,6 +321,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* redundant STORE *)
 
 Lemma redundant_STORE_core :
   forall r phi,
@@ -403,6 +435,24 @@ Proof.
 + destruct H as [H | H].
 * left; apply IH1; apply H.
 * right; apply IH2; apply H.
+
+- assert (Hcon': ~ (contains_match r phi1 \/ contains_match r phi2)).
+  { intros H; apply Hcon; apply H. }
+  apply Decidable.not_or_iff in Hcon'.
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  assert (IH1 := (IHphi1 Hcon1 sigma i v d));
+  assert (IH2 := (IHphi2 Hcon2 sigma i v d));
+  clear IHphi1 IHphi2 Hcon.
+  split; intros H.
++ destruct H as [H1 H2].
+  split.
+* apply IH1; apply H1.
+* apply IH2; apply H2.
++ destruct H as [H1 H2].
+  split.
+* apply IH1; apply H1.
+* apply IH2; apply H2.
 Qed.
 
 Lemma redundant_STORE'_core :
@@ -523,6 +573,23 @@ Proof.
 + destruct H as [H | H].
 * left; apply IH1; apply H.
 * right; apply IH2; apply H.
+
+- assert (Hcon': contains_store r phi1 /\ contains_store r phi2).
+  { apply Hcon. }
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  assert (IH1 := (IHphi1 Hcon1 sigma i v d));
+  assert (IH2 := (IHphi2 Hcon2 sigma i v d));
+  clear IHphi1 IHphi2 Hcon.
+  split; intros H.
++ destruct H as [H1 H2].
+  split.
+* apply IH1; apply H1.
+* apply IH2; apply H2.
++ destruct H as [H1 H2].
+  split.
+* apply IH1; apply H1.
+* apply IH2; apply H2.
 Qed.
 
 
@@ -575,6 +642,11 @@ Proof.
   assumption.
 + apply (redundant_STORE_core _ _ Hcon _ _ v _).
   assumption.
+- split; intros H.
++ apply (redundant_STORE_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE_core _ _ Hcon _ _ v _).
+  assumption.
 Qed.
 
 Lemma redundant_STORE' :
@@ -590,6 +662,11 @@ Proof.
   contradiction.
 - unfold contains_store in Hcon.
   contradiction.
+- split; intros H.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
+  assumption.
++ apply (redundant_STORE'_core _ _ Hcon _ _ v _).
+  assumption.
 - split; intros H.
 + apply (redundant_STORE'_core _ _ Hcon _ _ v _) in H.
   assumption.
