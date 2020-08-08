@@ -420,6 +420,29 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma update_is_commutative :
+  forall v r1 r2 d,
+    update (update v r1 d) r2 d = update (update v r2 d) r1 d.
+Proof.
+  intros v r1 r2 d.
+  apply valuation_extensionality.
+  intros r0.
+  unfold update.
+  case (r0 =? r2); case (r0 =? r1); trivial.
+Qed.
+
+Lemma STORE_is_commutative :
+  forall phi r1 r2,
+    (↓ r1, (↓ r2, phi)) = (↓ r2, (↓ r1, phi)).
+Proof.
+  intros phi r1 r2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  unfold models.
+  rewrite (update_is_commutative _ r1 r2).
+  reflexivity.
+Qed.
+
 (* redundant STORE *)
 
 Lemma redundant_STORE_core :
