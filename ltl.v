@@ -212,6 +212,24 @@ Proof.
   split; assumption.
 Qed.
 
+Lemma distr_G_over_AND :
+  forall phi1 phi2,
+    (G (phi1 ./\ phi2)) = (G phi1 ./\ G phi2).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- split;
+  intros j ij;
+  apply (H j ij).
+- destruct H as [H1 H2].
+  intros j ij.
+  split.
++ apply (H1 j ij).
++ apply (H2 j ij).
+Qed.
+
 Lemma distr_STORE_over_AND :
   forall phi1 phi2 r,
     (↓ r, (phi1 ./\ phi2)) = ((↓ r, phi1) ./\ (↓ r, phi2)).
@@ -246,6 +264,41 @@ Proof.
   rewrite <- (S_pred j i).
     assumption.
   auto. (* i < j *)
+Qed.
+
+Lemma GX_equals_XG :
+  forall phi, (G (X phi)) = (X (G phi)).
+Proof.
+  intros phi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- intros j ij.
+  assert (ij': i <= pred j).
+  {
+    apply le_pred in ij.
+    rewrite <- pred_Sn in ij.
+    apply ij.
+  }
+  assert (predj: S (pred j) = j).
+  {
+    destruct j.
+  - apply le_not_gt in ij.
+    assert (Hn: S i > 0).
+    { apply gt_Sn_O. }
+    contradiction.
+  - apply pred_Sn.
+  }
+  unfold models in H.
+  assert (H' := (H (pred j) ij')); clear H.
+  rewrite predj in H'.
+  apply H'.
+- intros j ij.
+  unfold models in H.
+  assert (ij': S i <= S j).
+  { apply le_n_S. assumption. }
+  assert (H' := (H (S j) ij')); clear H.
+  apply H'.
 Qed.
 
 Lemma F_equals_phi_or_XF :
@@ -283,6 +336,30 @@ Proof.
 * assumption.
 Qed.
 
+Lemma G_equals_phi_and_XG :
+  forall phi,
+    (G phi) = (phi ./\ X (G phi)).
+Proof.
+  intros phi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- split.
++ apply (H i). trivial.
++ intros j sij.
+  assert (ij: i <= j).
+  { apply le_S_n. apply le_S. assumption. }
+  apply (H j ij).
+- destruct H as [H1 H2].
+  intros j ij.
+  apply Nat.lt_eq_cases in ij.
+  destruct ij as [ij | ij].
++ apply lt_le_S in ij.
+  apply (H2 j ij).
++ rewrite <- ij.
+  assumption.
+Qed.
+
 Lemma F_is_idempotent :
   forall phi, (F (F phi)) = (F phi).
 Proof.
@@ -301,6 +378,24 @@ Proof.
     trivial. (* i <= i *)
   exists j.
   split; assumption.
+Qed.
+
+Lemma G_is_idempotent :
+  forall phi, (G (G phi)) = (G phi).
+Proof.
+  intros phi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- intros j ij.
+  assert (jj: j <= j).
+  { trivial. }
+  apply (H j ij j jj).
+- intros j0 ij0 j j0j.
+  assert (ij: i <= j).
+  { apply (Nat.le_trans _ j0 _ ij0 j0j). }
+  clear j0 ij0 j0j.
+  apply (H j ij).
 Qed.
 
 Lemma update_is_idempotent :
