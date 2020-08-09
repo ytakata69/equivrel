@@ -26,6 +26,7 @@ Inductive ltl :=
   | OR  : ltl -> ltl -> ltl
   | AND : ltl -> ltl -> ltl
   | NOT : ltl -> ltl
+  | until : ltl -> ltl -> ltl
   .
 
 Notation "'↓' r , phi" := (STORE r phi) (at level 200).
@@ -35,6 +36,7 @@ Notation "a './\' b" := (AND a b) (at level 75, right associativity).
 Notation  "'[' a ']'" := (pos a).
 Notation "'~[' a ']'" := (neg a).
 Notation "'.~' a" := (NOT a) (at level 75).
+Notation "a 'U' b" := (until a b) (at level 75, right associativity).
 
 (* example formulas *)
 (*
@@ -73,6 +75,8 @@ Fixpoint models
   | phi1 .\/ phi2 => models sigma i v phi1 \/ models sigma i v phi2
   | phi1 ./\ phi2 => models sigma i v phi1 /\ models sigma i v phi2
   | .~ phi' => ~ models sigma i v phi'
+  | phi1 U phi2 => exists j : nat, i <= j /\ models sigma j v phi2 /\
+                   forall j': nat, i <= j' < j -> models sigma j' v phi1
   end.
 
 Notation "'(' sigma ',' i '|=' v ',' phi ')'"
@@ -103,6 +107,7 @@ Fixpoint contains_match
   | (↓ r', phi')   => contains_match r phi'
   | phi1 .\/ phi2  => contains_match r phi1 \/ contains_match r phi2
   | phi1 ./\ phi2  => contains_match r phi1 \/ contains_match r phi2
+  | phi1  U  phi2  => contains_match r phi1 \/ contains_match r phi2
   | .~ phi'        => contains_match r phi'
   end.
 
@@ -117,6 +122,7 @@ Fixpoint contains_store
   | (↓ r', phi')   => r' = r \/ contains_store r phi'
   | phi1 .\/ phi2  => contains_store r phi1 /\ contains_store r phi2
   | phi1 ./\ phi2  => contains_store r phi1 /\ contains_store r phi2
+  | phi1  U  phi2  => contains_store r phi1 /\ contains_store r phi2
   | .~ phi'        => contains_store r phi'
   end.
 
@@ -239,6 +245,51 @@ Proof.
   split; assumption.
 Qed.
 
+(* distribution over U *)
+
+Lemma distr_X_over_U :
+  forall phi1 phi2,
+    (X (phi1 U phi2)) = (X phi1 U X phi2).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [j [sij [H2 H1]]].
+  exists (pred j).
+  repeat split.
++ apply Nat.le_succ_le_pred; assumption.
++ unfold models.
+  rewrite <- (S_pred j i).
+    assumption.
+  auto. (* i < j *)
++ intros j' [ij' j'predj].
+  apply (H1 (S j')).
+  split.
+    apply le_n_S; assumption.
+  apply Nat.lt_succ_lt_pred; assumption.
+- destruct H as [j [ij [H2 H1]]].
+  exists (S j).
+  repeat split.
++ apply le_n_S; assumption.
++ apply H2.
++ intros j' [sij' j'sj].
+  assert (Spredj': j' = S (pred j')).
+  { apply (S_pred j' i). auto. }
+  assert (ij': i <= pred j' < j).
+  {
+    split.
+  - apply Nat.le_succ_le_pred; assumption.
+  - apply lt_S_n.
+    rewrite <- Spredj'.
+    assumption.
+  }
+  assert (H1' := (H1 (pred j') ij')).
+  unfold models in H1'.
+  rewrite <- Spredj' in H1'.
+  assumption.
+Qed.
+
 (* equivalent transformations *)
 
 Lemma FX_equals_XF :
@@ -357,6 +408,60 @@ Proof.
   assumption.
 Qed.
 
+Lemma U_equals_phi2_or_phi1_and_XU :
+  forall phi1 phi2,
+    (phi1 U phi2) = (phi2 .\/ phi1 ./\ X (phi1 U phi2)).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [j [ij [H2 H1]]].
+  assert (Hj: i = j \/ S i <= j).
+  {
+    destruct ij.
+  - left; reflexivity.
+  - right; apply le_n_S; assumption.
+  }
+  destruct Hj as [Hj | Hj].
++ left.
+  rewrite Hj.
+  assumption.
++ right.
+  split.
+* apply H1.
+  split; trivial.
+* exists j.
+  split; try assumption.
+  split; try assumption.
+  intros j' sij'j.
+  apply H1.
+  destruct sij'j as [sij' j'j].
+  apply le_Sn_le in sij'.
+  split; assumption.
+- destruct H as [H | [H1 [j [ij [H2 H1']]]]].
++ exists i.
+  split; try trivial.
+  split; try assumption.
+  intros j' [ij' j'i].
+  apply (Nat.le_lt_trans _ _ _ ij') in j'i.
+  apply Nat.lt_irrefl in j'i.
+  contradiction.
++ exists j.
+  split.
+* apply le_S_n.
+  apply Nat.le_le_succ_r.
+  assumption.
+* split.
+    assumption.
+  intros j' [ij' j'j].
+  destruct ij'.
+    assumption.
+  apply (H1' (S m)).
+  split; try assumption.
+    apply le_n_S; assumption.
+Qed.
+
 Lemma not_F_equals_G_not :
   forall phi, (.~ F phi) = (G (.~ phi)).
 Proof.
@@ -372,6 +477,21 @@ Proof.
   destruct Hn as [j [ij Hn]].
   apply (H j ij).
   assumption.
+Qed.
+
+Lemma F_equals_tt_U :
+  forall phi, (F phi) = ([tt] U phi).
+Proof.
+  intros phi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [j [ij H]].
+  exists j.
+  repeat split; assumption.
+- destruct H as [j [ij [H _]]].
+  exists j.
+  split; assumption.
 Qed.
 
 Lemma F_is_idempotent :
@@ -576,6 +696,21 @@ Proof.
   apply H;
   apply (IHphi Hcon' _ _ v d);
   assumption.
+
+- assert (Hcon': ~ (contains_match r phi1 \/ contains_match r phi2)).
+  { intros H; apply Hcon; apply H. }
+  apply Decidable.not_or_iff in Hcon'.
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  split; intros H;
+  (destruct H as [j [ij [H2 H1]]];
+   exists j;
+   split; try assumption;
+   split;
+   (apply (IHphi2 Hcon2 _ _ v d); apply H2) ||
+   (intros j' ij'j;
+    apply (IHphi1 Hcon1 _ _ v d);
+    apply (H1 j' ij'j))).
 Qed.
 
 Lemma redundant_STORE'_core :
@@ -704,6 +839,20 @@ Proof.
    apply H;
    apply (IHphi Hcon' _ _ v d);
    assumption).
+
+- assert (Hcon': contains_store r phi1 /\ contains_store r phi2).
+  { apply Hcon. }
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  split; intros H;
+  (destruct H as [j [ij [H2 H1]]];
+   exists j;
+   split; try assumption;
+   split;
+   (apply (IHphi2 Hcon2 _ _ v d); apply H2) ||
+   (intros j' ij'j;
+   apply (IHphi1 Hcon1 _ _ v d);
+   apply (H1 j' ij'j))).
 Qed.
 
 
