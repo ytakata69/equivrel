@@ -27,6 +27,7 @@ Inductive ltl :=
   | AND : ltl -> ltl -> ltl
   | NOT : ltl -> ltl
   | until : ltl -> ltl -> ltl
+  | weak_until : ltl -> ltl -> ltl
   .
 
 Notation "'↓' r , phi" := (STORE r phi) (at level 200).
@@ -37,6 +38,7 @@ Notation  "'[' a ']'" := (pos a).
 Notation "'~[' a ']'" := (neg a).
 Notation "'.~' a" := (NOT a) (at level 75).
 Notation "a 'U' b" := (until a b) (at level 75, right associativity).
+Notation "a 'W' b" := (weak_until a b) (at level 75, right associativity).
 
 (* example formulas *)
 (*
@@ -77,6 +79,9 @@ Fixpoint models
   | .~ phi' => ~ models sigma i v phi'
   | phi1 U phi2 => exists j : nat, i <= j /\ models sigma j v phi2 /\
                    forall j': nat, i <= j' < j -> models sigma j' v phi1
+  | phi1 W phi2 => (exists j : nat, i <= j /\ models sigma j v phi2 /\
+                    forall j': nat, i <= j' < j -> models sigma j' v phi1) \/
+                   (forall j': nat, i <= j' -> models sigma j' v phi1)
   end.
 
 Notation "'(' sigma ',' i '|=' v ',' phi ')'"
@@ -108,6 +113,7 @@ Fixpoint contains_match
   | phi1 .\/ phi2  => contains_match r phi1 \/ contains_match r phi2
   | phi1 ./\ phi2  => contains_match r phi1 \/ contains_match r phi2
   | phi1  U  phi2  => contains_match r phi1 \/ contains_match r phi2
+  | phi1  W  phi2  => contains_match r phi1 \/ contains_match r phi2
   | .~ phi'        => contains_match r phi'
   end.
 
@@ -123,6 +129,7 @@ Fixpoint contains_store
   | phi1 .\/ phi2  => contains_store r phi1 /\ contains_store r phi2
   | phi1 ./\ phi2  => contains_store r phi1 /\ contains_store r phi2
   | phi1  U  phi2  => contains_store r phi1 /\ contains_store r phi2
+  | phi1  W  phi2  => contains_store r phi1 /\ contains_store r phi2
   | .~ phi'        => contains_store r phi'
   end.
 
@@ -711,6 +718,26 @@ Proof.
    (intros j' ij'j;
     apply (IHphi1 Hcon1 _ _ v d);
     apply (H1 j' ij'j))).
+
+- assert (Hcon': ~ (contains_match r phi1 \/ contains_match r phi2)).
+  { intros H; apply Hcon; apply H. }
+  apply Decidable.not_or_iff in Hcon'.
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  split; intros H;
+  destruct H as [[j [ij [H2 H1]]] | H1];
+  (left;
+   exists j;
+   split; try assumption;
+   split;
+   (apply (IHphi2 Hcon2 _ _ v d); apply H2) ||
+   (intros j' ij'j;
+    apply (IHphi1 Hcon1 _ _ v d);
+    apply (H1 j' ij'j))) ||
+  (right;
+   (intros j' ij';
+    apply (IHphi1 Hcon1 _ _ v d);
+    apply (H1 j' ij'))).
 Qed.
 
 Lemma redundant_STORE'_core :
@@ -850,6 +877,25 @@ Proof.
    split; try assumption;
    split;
    (apply (IHphi2 Hcon2 _ _ v d); apply H2) ||
+   (intros j' ij'j;
+   apply (IHphi1 Hcon1 _ _ v d);
+   apply (H1 j' ij'j))).
+
+- assert (Hcon': contains_store r phi1 /\ contains_store r phi2).
+  { apply Hcon. }
+  destruct Hcon' as [Hcon1 Hcon2].
+  intros sigma i v d.
+  split; intros H;
+  destruct H as [[j [ij [H2 H1]]] | H1];
+  (left;
+   exists j;
+   split; try assumption;
+   split;
+   (apply (IHphi2 Hcon2 _ _ v d); apply H2) ||
+   (intros j' ij'j;
+   apply (IHphi1 Hcon1 _ _ v d);
+   apply (H1 j' ij'j))) ||
+  (right;
    (intros j' ij'j;
    apply (IHphi1 Hcon1 _ _ v d);
    apply (H1 j' ij'j))).
