@@ -36,9 +36,9 @@ Notation "a '.\/' b" := (OR  a b) (at level 85, right associativity).
 Notation "a './\' b" := (AND a b) (at level 75, right associativity).
 Notation  "'[' a ']'" := (pos a).
 Notation "'~[' a ']'" := (neg a).
-Notation "'.~' a" := (NOT a) (at level 75).
-Notation "a 'U' b" := (until a b) (at level 75, right associativity).
-Notation "a 'W' b" := (weak_until a b) (at level 75, right associativity).
+Notation "'.~' a" := (NOT a) (at level 71).
+Notation "a 'U' b" := (until a b) (at level 73, right associativity).
+Notation "a 'W' b" := (weak_until a b) (at level 73, right associativity).
 
 (* example formulas *)
 (*
@@ -196,6 +196,70 @@ Proof.
   split; auto.
 Qed.
 
+Lemma distr_U_over_OR :
+  forall psi phi1 phi2,
+    (psi U (phi1 .\/ phi2)) = (psi U phi1 .\/ psi U phi2).
+Proof.
+  intros psi phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [j [ij [[H1 | H1] H2]]].
++ left.
+  exists j.
+  split; try assumption.
+  split; try assumption.
++ right.
+  exists j.
+  split; try assumption.
+  split; try assumption.
+- destruct H as [H | H];
+  destruct H as [j [ij [H1 H2]]];
+  exists j;
+  split; try assumption;
+  split; try assumption;
+  (left; assumption) ||
+  (right; assumption).
+Qed.
+
+Lemma distr_W_over_OR :
+  forall psi phi1 phi2,
+    (psi W (phi1 .\/ phi2)) = (psi W phi1 .\/ psi W phi2).
+Proof.
+  intros psi phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [[j [ij [[H1 | H1] H2]]] | H1].
++ left.
+  left.
+  exists j.
+  split; try assumption.
+  split; try assumption.
++ right.
+  left.
+  exists j.
+  split; try assumption.
+  split; try assumption.
++ left.
+  right; assumption.
+- destruct H as [H | H];
+  destruct H as [[j [ij [H1 H2]]] | H1];
+  (left;
+   exists j;
+   split; try assumption;
+   split; try assumption;
+   (left; assumption) ||
+   (right; assumption)) ||
+  (right;
+   exists j;
+   split; try assumption;
+   split; try assumption;
+   (left; assumption) ||
+   (right; assumption)) ||
+  (right; assumption).
+Qed.
+
 Lemma distr_STORE_over_OR :
   forall phi1 phi2 r,
     (↓ r, (phi1 .\/ phi2)) = ((↓ r, phi1) .\/ (↓ r, phi2)).
@@ -240,6 +304,117 @@ Proof.
 + apply (H2 j ij).
 Qed.
 
+Lemma distr_U_over_AND :
+  forall phi1 phi2 psi,
+    ((phi1 ./\ phi2) U psi) = (phi1 U psi ./\ phi2 U psi).
+Proof.
+  intros phi1 phi2 psi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [j [ij [H1 H2]]].
+  split;
+  (exists j;
+   split; try assumption;
+   split; try assumption;
+   intros j' ij'j;
+   destruct (H2 j' ij'j) as [H3 H4];
+   assumption).
+- destruct H as [H1' H2'];
+  destruct H1' as [j1 [ij1 [H11 H12]]];
+  destruct H2' as [j2 [ij2 [H21 H22]]].
+  destruct (Nat.le_ge_cases j1 j2) as [j1j2 | j2j1].
++ exists j1.
+  split; try assumption;
+  split; try assumption.
+  intros j' ij'j1.
+  split.
+* apply H12; assumption.
+* apply H22.
+  destruct ij'j1 as [ij' j'j1].
+  split; try assumption.
+  apply (Nat.lt_le_trans _ j1 _); assumption.
++ exists j2.
+  split; try assumption;
+  split; try assumption.
+  intros j' ij'j2.
+  split.
+* apply H12.
+  destruct ij'j2 as [ij' j'j2].
+  split; try assumption.
+  apply (Nat.lt_le_trans _ j2 _); assumption.
+* apply H22; assumption.
+Qed.
+
+Lemma distr_W_over_AND :
+  forall phi1 phi2 psi,
+    ((phi1 ./\ phi2) W psi) = (phi1 W psi ./\ phi2 W psi).
+Proof.
+  intros phi1 phi2 psi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [[j [ij [H1 H2]]] | H1].
++ split;
+  (left;
+   exists j;
+   split; try assumption;
+   split; try assumption;
+   intros j' ij'j;
+   destruct (H2 j' ij'j) as [H3 H4];
+   assumption).
++ split;
+  right;
+  apply H1.
+- destruct H as [H1' H2'];
+  destruct H1' as [[j1 [ij1 [H11 H12]]] | H1];
+  destruct H2' as [[j2 [ij2 [H21 H22]]] | H2].
+  destruct (Nat.le_ge_cases j1 j2) as [j1j2 | j2j1].
++ left.
+  exists j1.
+  split; try assumption;
+  split; try assumption.
+  intros j' ij'j1.
+  split.
+* apply H12; assumption.
+* apply H22.
+  destruct ij'j1 as [ij' j'j1].
+  split; try assumption.
+  apply (Nat.lt_le_trans _ j1 _); assumption.
++ left.
+  exists j2.
+  split; try assumption;
+  split; try assumption.
+  intros j' ij'j2.
+  split.
+* apply H12.
+  destruct ij'j2 as [ij' j'j2].
+  split; try assumption.
+  apply (Nat.lt_le_trans _ j2 _); assumption.
+* apply H22; assumption.
++ left.
+  exists j1.
+  split; try assumption;
+  split; try assumption.
+  intros j' ij'j1.
+  split.
+* apply H12; apply ij'j1.
+* apply H2;  apply ij'j1.
++ left.
+  exists j2.
+  split; try assumption;
+  split; try assumption.
+  intros j' ij'j2.
+  split.
+* apply H1;  apply ij'j2.
+* apply H22; apply ij'j2.
++ right.
+  intros j ij.
+  split.
+* apply H1; assumption.
+* apply H2; assumption.
+Qed.
+
 Lemma distr_STORE_over_AND :
   forall phi1 phi2 r,
     (↓ r, (phi1 ./\ phi2)) = ((↓ r, phi1) ./\ (↓ r, phi2)).
@@ -252,7 +427,7 @@ Proof.
   split; assumption.
 Qed.
 
-(* distribution over U *)
+(* distribution over U, W *)
 
 Lemma distr_X_over_U :
   forall phi1 phi2,
@@ -294,6 +469,65 @@ Proof.
   assert (H1' := (H1 (pred j') ij')).
   unfold models in H1'.
   rewrite <- Spredj' in H1'.
+  assumption.
+Qed.
+
+Lemma distr_X_over_W :
+  forall phi1 phi2,
+    (X (phi1 W phi2)) = (X phi1 W X phi2).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [[j [sij [H2 H1]]] | H1].
++ left.
+  exists (pred j).
+  repeat split.
+* apply Nat.le_succ_le_pred; assumption.
+* unfold models.
+  rewrite <- (S_pred j i).
+    assumption.
+  auto. (* i < j *)
+* intros j' [ij' j'predj].
+  apply (H1 (S j')).
+  split.
+    apply le_n_S; assumption.
+  apply Nat.lt_succ_lt_pred; assumption.
++ right.
+  intros j ij.
+  apply H1.
+  apply le_n_S; assumption.
+- destruct H as [[j [ij [H2 H1]]] | H1].
++ left.
+  exists (S j).
+  repeat split.
+* apply le_n_S; assumption.
+* apply H2.
+* intros j' [sij' j'sj].
+  assert (Spredj': j' = S (pred j')).
+  { apply (S_pred j' i). auto. }
+  assert (ij': i <= pred j' < j).
+  {
+    split.
+  - apply Nat.le_succ_le_pred; assumption.
+  - apply lt_S_n.
+    rewrite <- Spredj'.
+    assumption.
+  }
+  assert (H1' := (H1 (pred j') ij')).
+  unfold models in H1'.
+  rewrite <- Spredj' in H1'.
+  assumption.
++ right.
+  intros j sij.
+  assert (Spredj: j = S (pred j)).
+  { apply (S_pred j i). auto. }
+  assert (ipredj: i <= pred j).
+  { apply Nat.le_succ_le_pred; assumption. }
+  assert (H1' := (H1 (pred j) ipredj)).
+  unfold models in H1'.
+  rewrite <- Spredj in H1'.
   assumption.
 Qed.
 
@@ -469,6 +703,85 @@ Proof.
     apply le_n_S; assumption.
 Qed.
 
+Lemma W_equals_phi2_or_phi1_and_XW :
+  forall phi1 phi2,
+    (phi1 W phi2) = (phi2 .\/ phi1 ./\ X (phi1 W phi2)).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [[j [ij [H2 H1]]] | H1].
++ assert (Hj: i = j \/ S i <= j).
+  {
+    destruct ij.
+  - left; reflexivity.
+  - right; apply le_n_S; assumption.
+  }
+  destruct Hj as [Hj | Hj].
+* left.
+  rewrite Hj.
+  assumption.
+* right.
+  split.
+-- apply H1.
+  split; trivial.
+-- left.
+  exists j.
+  split; try assumption.
+  split; try assumption.
+  intros j' sij'j.
+  apply H1.
+  destruct sij'j as [sij' j'j].
+  apply le_Sn_le in sij'.
+  split; assumption.
++ right.
+  split.
+* apply H1. trivial.
+* right.
+  intros j sij.
+  apply H1.
+  apply le_Sn_le; assumption.
+
+- destruct H as [H | [H1 [[j [ij [H2 H1']]] | H1']]].
++ left.
+  exists i.
+  split; try trivial.
+  split; try assumption.
+  intros j' [ij' j'i].
+  apply (Nat.le_lt_trans _ _ _ ij') in j'i.
+  apply Nat.lt_irrefl in j'i.
+  contradiction.
++ left.
+  exists j.
+  split.
+* apply le_S_n.
+  apply Nat.le_le_succ_r.
+  assumption.
+* split.
+    assumption.
+  intros j' [ij' j'j].
+  destruct ij'.
+    assumption.
+  apply (H1' (S m)).
+  split; try assumption.
+    apply le_n_S; assumption.
++ right.
+  intros j ij.
+  assert (Hj: i = j \/ S i <= j).
+  {
+    destruct ij.
+  - left; reflexivity.
+  - right; apply le_n_S; assumption.
+  }
+  destruct Hj as [Hj | Hj]; clear ij.
+* rewrite <- Hj.
+  assumption.
+* apply H1'; assumption.
+Qed.
+
+(* relationship among F, G, U, W *)
+
 Lemma not_F_equals_G_not :
   forall phi, (.~ F phi) = (G (.~ phi)).
 Proof.
@@ -500,6 +813,76 @@ Proof.
   exists j.
   split; assumption.
 Qed.
+
+Lemma G_equals_W_ff :
+  forall phi, (G phi) = (phi W ~[tt]).
+Proof.
+  intros phi.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- right.
+  apply H.
+- destruct H as [[j [ij [H _]]] | H].
++ unfold models in H;
+  unfold models_atom in H.
+  contradiction.
++ intros j ij.
+  apply (H j ij).
+Qed.
+
+Lemma U_is_W_and_F :
+  forall phi1 phi2,
+    (phi1 U phi2) = (phi1 W phi2 ./\ F phi2).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- split;
+  destruct H as [j [ij [H2 H1]]].
++ left.
+  exists j.
+  repeat split; try assumption.
++ exists j.
+  split; assumption.
+- destruct H as [H1' H2'];
+  destruct H1' as [[j [ij [H11 H12]]] | H1].
++ exists j.
+  repeat split; try assumption.
++ destruct H2' as [j [ij H2]].
+  exists j.
+  repeat split; try assumption.
+  intros j' ij'j.
+  apply H1.
+  apply ij'j.
+Qed.
+
+Lemma W_is_U_or_G :
+  forall phi1 phi2,
+    (phi1 W phi2) = (phi1 U phi2 .\/ G phi1).
+Proof.
+  intros phi1 phi2.
+  apply ltl_extensionality.
+  intros sigma i v.
+  split; intros H.
+- destruct H as [[j [ij [H2 H1]]] | H1].
++ left.
+  exists j.
+  repeat split; try assumption.
++ right.
+  intros j ij.
+  apply H1; assumption.
+- destruct H as [H | H].
++ destruct H as [j [ij [H1 H2]]].
+  left.
+  exists j.
+  repeat split; try assumption.
++ right.
+  apply H.
+Qed.
+
+(* idempotency *)
 
 Lemma F_is_idempotent :
   forall phi, (F (F phi)) = (F phi).
@@ -560,6 +943,8 @@ Proof.
   rewrite update_is_idempotent.
   reflexivity.
 Qed.
+
+(* commutativity *)
 
 Lemma update_is_commutative :
   forall v r1 r2 d,
