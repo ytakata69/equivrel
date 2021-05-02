@@ -12,4 +12,4 @@ after_r.vo: register_type.vo after.vo
 grammar.vo: register_type.vo after.vo after_r.vo after_l.vo
 
 clean:
-	$(RM) *.vo *.glob .*.aux *~
+	$(RM) *.vo *.vo[ks] *.glob .*.aux *~
