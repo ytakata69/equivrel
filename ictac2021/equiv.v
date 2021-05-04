@@ -84,7 +84,7 @@ Definition Phi_tst_asgn (tst : Tst) (asgn : Asgn) (phi : Phi) :=
   (forall i j, asgn i = true /\ asgn j = true -> phi (X' i) (X' j)) /\
   (forall i, asgn i <> true -> phi (X i) (X' i)).
 
-Definition Phi_eq (j : nat) (phi : Phi) :=
+Definition Phi_eq_j (j : nat) (phi : Phi) :=
   phi Xtop (X j) /\ forall i, phi (X i) (X' i).
 
 (* models *)
@@ -480,4 +480,86 @@ Proof.
   split.
   - apply meanings_of_phi_tst_asgn_1.
   - apply meanings_of_phi_tst_asgn_2.
+Qed.
+
+(* Phi_eq_j *)
+
+Lemma phi_matches_is_Phi_eq_j :
+  forall theta j,
+  Phi_eq_j j (phi_matches theta (theta j) theta).
+Proof.
+  intros theta j.
+  unfold Phi_eq_j.
+  unfold phi_matches.
+  auto.
+Qed.
+
+Lemma meanings_of_phi_eq_j_1 :
+  forall theta theta' e j,
+  (exists phi,
+     is_equiv_rel phi /\
+     Phi_eq_j j phi /\
+     (theta, e, theta') |= phi)
+  ->
+  (theta = theta' /\ theta j = e).
+Proof.
+  intros theta theta' e j.
+  intros [phi [Heq [Hphi Hmo]]].
+  unfold is_equiv_rel in Heq.
+  destruct Heq as [Pref [Psym Ptra]].
+  unfold Phi_eq_j in Hphi.
+  destruct Hphi as [HphiT Hphi].
+  unfold models in Hmo;
+  unfold two_Theta_D_models_Phi in Hmo.
+  destruct Hmo as [HmoL [HmoR [HmoLR [HmoLT HmoRT]]]].
+
+  split.
+  - (* theta = theta' *)
+  apply Theta_extensionality.
+  intros i.
+  apply HmoLR.
+  apply Hphi.
+  - (* theta j = e *)
+  apply HmoLT.
+  apply Psym.
+  apply HphiT.
+Qed.
+
+Lemma meanings_of_phi_eq_j_2 :
+  forall theta theta' e j,
+  (theta = theta' /\ theta j = e)
+  ->
+  (exists phi,
+     is_equiv_rel phi /\
+     Phi_eq_j j phi /\
+     (theta, e, theta') |= phi).
+Proof.
+  intros theta theta' e j.
+  intros [Hth' Hthj].
+  exists (phi_matches theta e theta).
+  split; [| split].
+  - (* is_equiv_rel phi *)
+  apply phi_matches_is_equiv_rel.
+  - (* Phi_eq_j j phi *)
+  symmetry in Hthj.
+  rewrite Hthj.
+  apply phi_matches_is_Phi_eq_j.
+  - (* (theta, e, theta') |= phi *)
+  symmetry in Hth'.
+  rewrite Hth'.
+  apply theta_e_theta'_models_phi_matches.
+Qed.
+
+Theorem meanings_of_phi_eq_j :
+  forall theta theta' e j,
+  (exists phi,
+     is_equiv_rel phi /\
+     Phi_eq_j j phi /\
+     (theta, e, theta') |= phi)
+  <->
+  (theta = theta' /\ theta j = e).
+Proof.
+  split.
+  - apply meanings_of_phi_eq_j_1.
+  - apply meanings_of_phi_eq_j_2.
 Qed.
