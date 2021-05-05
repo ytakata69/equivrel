@@ -30,7 +30,7 @@ Definition is_equiv_rel   (phi : Phi) : Prop :=
 Axiom Phi_extensionality :
   forall phi phi' : Phi,
     (forall x y, phi x y <-> phi' x y) -> phi = phi'.
-
+  
 Definition phi_zero (a b : register) := True.
 
 (* Composition *)
@@ -86,6 +86,9 @@ Axiom tst_is_empty_or_not :
 Axiom asgn_is_empty_or_not :
   forall asgn : Asgn, (forall i, asgn i <> true) \/ exists i, asgn i = true.
 
+Axiom Tst_extensionality :
+  forall tst tst' : Tst, (forall xi, tst xi = tst' xi) -> tst = tst'.
+
 Definition Phi_tst_asgn (tst : Tst) (asgn : Asgn) (phi : Phi) :=
   (forall xi, tst xi = true ->
      forall xj, tst xj = true <-> phi (X_ xi) (X_ xj)) /\
@@ -118,6 +121,35 @@ Instance two_Theta_D_models_Phi : Models (Theta * D * Theta) Phi :=
           (forall i,   theta  i = d <-> phi (X  i) Xtop) /\
           (forall i,   theta' i = d <-> phi (X' i) Xtop)
       end }.
+
+(* Utilities *)
+
+Lemma not_true_is_false :
+  forall b : bool, b <> true <-> b = false.
+Proof.
+  intros b.
+  split.
+  - (* b <> true -> b = false *)
+  case b; try contradiction; auto.
+  - (* b = false -> b <> true *)
+  intros H.
+  rewrite H.
+  discriminate.
+Qed.
+
+Lemma false_eq_false :
+  forall b1 b2 : bool,
+  (b1 = true <-> b2 = true) -> b1 = false -> b2 = false.
+Proof.
+  intros b1 b2.
+  case b2;
+  intros [Heq1 Heq2] Hfalse;
+  auto.
+  assert (H : b1 = true).
+  { apply Heq2. reflexivity. }
+  rewrite H in Hfalse.
+  exact Hfalse.
+Qed.
 
 (* Properties *)
 
