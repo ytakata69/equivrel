@@ -33,6 +33,15 @@ Axiom Phi_extensionality :
 
 Definition phi_zero (a b : register) := True.
 
+(* Composition *)
+
+Definition composable (phi1 phi2 : Phi) : Prop :=
+  forall i j, phi1 (X' i) (X' j) <-> phi2 (X i) (X j).
+
+Definition composableT (phi1 phi2 : Phi) : Prop :=
+  composable phi1 phi2 /\
+  forall i, phi1 (X' i) Xtop <-> phi2 (X i) Xtop.
+
 (* Assignments *)
 
 Parameter D : Set.
@@ -45,6 +54,7 @@ Definition update (theta : Theta) (asgn : Asgn) (d : D) : Theta :=
 Axiom Theta_extensionality :
   forall theta theta' : Theta,
     (forall i, theta i = theta' i) -> theta = theta'.
+
 
 Axiom outside_data_exists :
   forall (theta : Theta) e, exists d, d <> e /\ forall i, theta i <> d.
@@ -562,4 +572,246 @@ Proof.
   split.
   - apply meanings_of_phi_eq_j_1.
   - apply meanings_of_phi_eq_j_2.
+Qed.
+
+(* Composable *)
+
+Theorem at_most_one_Phi_tst_asgn :
+  forall tst asgn phi phi1 phi2,
+  is_equiv_rel phi1 /\ is_equiv_rel phi2 ->
+  composableT phi phi1 /\ Phi_tst_asgn tst asgn phi1 ->
+  composableT phi phi2 /\ Phi_tst_asgn tst asgn phi2
+  -> phi1 = phi2.
+Proof.
+  intros tst asgn phi phi1 phi2.
+  intros [P1eq P2eq].
+  intros [Hco1 Hphi1] [Hco2 Hphi2].
+
+  unfold is_equiv_rel in P1eq.
+  destruct P1eq as [P1ref [P1sym P1tra]].
+  unfold is_equiv_rel in P2eq.
+  destruct P2eq as [P2ref [P2sym P2tra]].
+
+  unfold composableT in Hco1.
+  unfold composable in Hco1.
+  destruct Hco1 as [Hco1 Hco1T].
+  unfold composableT in Hco2.
+  unfold composable in Hco2.
+  destruct Hco2 as [Hco2 Hco2T].
+
+  unfold Phi_tst_asgn in Hphi1;
+  destruct Hphi1 as [Hp1L [Hp1LR [Hp1R Hp1Thru]]].
+  unfold Phi_tst_asgn in Hphi2;
+  destruct Hphi2 as [Hp2L [Hp2LR [Hp2R Hp2Thru]]].
+
+  assert (Haf: forall i, asgn i = false -> asgn i <> true).
+  { intros i1 Haf. rewrite Haf. discriminate. }
+
+  assert (HXjX'i: forall i j, phi1 (X j) (X' i) <-> phi2 (X j) (X' i)).
+  {
+  intros i j.
+  case_eq (asgn i); intro Hai.
+  + (* asgn i = true -> ... *)
+  assert (Hp1' := Hp1LR i Hai (inl j)).
+  unfold X_ in Hp1'.
+  rewrite<- Hp1'.
+  assert (Hp2' := Hp2LR i Hai (inl j)).
+  unfold X_ in Hp2'.
+  rewrite<- Hp2'.
+  reflexivity.
+  + (* asgn i = false -> ... *)
+  assert (Hai': asgn i <> true).
+  { rewrite Hai. discriminate. }
+  assert (Hp1' := Hp1Thru i Hai').
+  assert (Hp2' := Hp2Thru i Hai').
+  apply P1sym in Hp1'.
+  apply P2sym in Hp2'.
+  split.
+  * intros H'.
+  apply (P2tra _ (X i)).
+  split.
+  -- apply Hco2.
+  apply Hco1.
+  apply (P1tra _ (X' i)).
+  auto.
+  -- apply Hp2Thru.
+  auto.
+  * intros H'.
+  apply (P1tra _ (X i)).
+  split.
+  -- apply Hco1.
+  apply Hco2.
+  apply (P2tra _ (X' i)).
+  auto.
+  -- apply Hp1Thru.
+  auto.
+  }
+
+  assert (HX'iXtop : forall i, phi1 (X' i) Xtop <-> phi2 (X' i) Xtop).
+  {
+  intro i.
+  case_eq (asgn i);
+  intros Hai.
+  + (* asgn i = true -> ... *)
+  assert (Hp1' := Hp1LR i Hai (inr top)).
+  unfold X_ in Hp1'.
+  assert (Hp2' := Hp2LR i Hai (inr top)).
+  unfold X_ in Hp2'.
+  rewrite Hp1' in Hp2'.
+  split;
+  intros H';
+  [apply P2sym | apply P1sym];
+  apply Hp2';
+  auto.
+  + (* asgn i = false -> ... *)
+  apply Haf in Hai.
+  assert (Hp1i : phi1 (X i) (X' i)).
+  { apply Hp1Thru. auto. }
+  assert (Hp2i : phi2 (X i) (X' i)).
+  { apply Hp2Thru. auto. }
+  split.
+  * intros H'.
+  apply (P2tra _ (X i)).
+  split; auto.
+  apply Hco2T.
+  apply Hco1T.
+  apply (P1tra _ (X' i)).
+  split; auto.
+  * intros H'.
+  apply (P1tra _ (X i)).
+  split; auto.
+  apply Hco1T.
+  apply Hco2T.
+  apply (P2tra _ (X' i)).
+  split; auto.
+  }
+
+  apply Phi_extensionality.
+  intros x y.
+  case x; case y;
+  try intro i; try intro j;
+  try (rewrite<- Hco1; rewrite<- Hco2);
+  try (rewrite<- Hco1T; rewrite<- Hco2T);
+  try reflexivity.
+
+  - (* phi1 (X j) (X' i) <-> phi2 (X j) (X' i) *)
+  apply HXjX'i.
+  - (* phi1 (X' j) (X i) <-> phi2 (X' j) (X i) *)
+  split.
+  + intros Hp1.
+  apply P2sym.
+  apply HXjX'i.
+  apply P1sym.
+  exact Hp1.
+  + intros Hp2.
+  apply P1sym.
+  apply HXjX'i.
+  apply P2sym.
+  exact Hp2.
+
+  - (* phi1 (X' j) (X' i) <-> phi2 (X' j) (X' i) *)
+  case_eq (asgn i); case_eq (asgn j);
+  intros Haj Hai.
+  + (* asgn j = true, asgn i = true -> ... *)
+  split;
+  intros H';
+  [apply Hp2R | apply Hp1R];
+  auto.
+  + (* asgn j = false, asgn i = true -> ... *)
+  apply Haf in Haj.
+  assert (Hp1' : phi1 (X j) (X' j)).
+  { apply Hp1Thru. auto. }
+  assert (Hp2' : phi2 (X j) (X' j)).
+  { apply Hp2Thru. auto. }
+
+  assert (Hp1'' := Hp1LR i Hai (inl j)).
+  unfold X_ in Hp1''.
+  assert (Hp2'' := Hp2LR i Hai (inl j)).
+  unfold X_ in Hp2''.
+  rewrite Hp1'' in Hp2''.
+  split.
+  * intros H'.
+  apply (P2tra _ (X j)).
+  split; [| apply Hp2'']; auto.
+  apply (P1tra _ (X' j)).
+  split; auto.
+  * intros H'.
+  apply (P1tra _ (X j)).
+  split; [| apply Hp2'']; auto.
+  apply (P2tra _ (X' j)).
+  split; auto.
+
+  + (* asgn j = true, asgn i = false -> ... *)
+  apply Haf in Hai.
+  assert (Hp1' : phi1 (X i) (X' i)).
+  { apply Hp1Thru. auto. }
+  assert (Hp2' : phi2 (X i) (X' i)).
+  { apply Hp2Thru. auto. }
+
+  assert (Hp1'' := Hp1LR j Haj (inl i)).
+  unfold X_ in Hp1''.
+  assert (Hp2'' := Hp2LR j Haj (inl i)).
+  unfold X_ in Hp2''.
+  rewrite Hp1'' in Hp2''.
+  split.
+  * intros H'.
+  apply (P2tra _ (X i)).
+  split; [apply P2sym ; apply Hp2'' |]; auto.
+  apply (P1tra _ (X' i)).
+  split; auto.
+  * intros H'.
+  apply (P1tra _ (X i)).
+  split; [apply P1sym ; apply Hp2'' |]; auto.
+  apply (P2tra _ (X' i)).
+  split; auto.
+
+  + (* asgn j = false, asgn i = false -> ... *)
+  apply Haf in Hai.
+  assert (Hp1i : phi1 (X i) (X' i)).
+  { apply Hp1Thru. auto. }
+  assert (Hp2i : phi2 (X i) (X' i)).
+  { apply Hp2Thru. auto. }
+  apply Haf in Haj.
+  assert (Hp1j : phi1 (X j) (X' j)).
+  { apply Hp1Thru. auto. }
+  assert (Hp2j : phi2 (X j) (X' j)).
+  { apply Hp2Thru. auto. }
+  split.
+  * intros H'.
+  apply (P2tra _ (X i)).
+  split; auto.
+  apply P2sym.
+  apply HXjX'i.
+  apply (P1tra _ (X' i)).
+  split; auto.
+  * intros H'.
+  apply (P1tra _ (X i)).
+  split; auto.
+  apply P1sym.
+  apply HXjX'i.
+  apply (P2tra _ (X' i)).
+  split; auto.
+
+  - (* phi1 (X' i) Xtop <-> phi2 (X' i) Xtop *)
+  apply HX'iXtop.
+
+  - (* phi1 Xtop (X i) <-> phi2 Xtop (X i) *)
+  split;
+  intros H';
+  [apply P2sym | apply P1sym];
+  [apply Hco2T | apply Hco1T];
+  [apply Hco1T | apply Hco2T];
+  auto.
+
+  - (* phi1 Xtop (X' i) <-> phi2 Xtop (X' i) *)
+  split;
+  intros H';
+  [apply P2sym | apply P1sym];
+  apply HX'iXtop;
+  auto.
+
+  - (* phi1 Xtop Xtop <-> phi2 Xtop Xtop *)
+  split;
+  intros H';
+  [apply P2ref | apply P1ref].
 Qed.
