@@ -78,6 +78,22 @@ Definition phi_matches (theta : Theta) (d : D) (theta' : Theta) : Phi :=
     | X' i, X' j => theta' i = theta' j
     end.
 
+(* Construct a phi' in Phi_eq_j composable with phi *)
+Definition phi_to_Phi_eq_j (j : nat) (phi : Phi) : Phi :=
+  fun x y : register =>
+    match x, y with
+    | X i,  X h  => phi (X' i) (X' h)
+    | X i,  Xtop => phi (X' i) (X' j)
+    | X i,  X' h => phi (X' i) (X' h)
+    | Xtop, X h  => phi (X' j) (X' h)
+    | Xtop, Xtop => phi (X' j) (X' j)
+    | Xtop, X' h => phi (X' j) (X' h)
+    | X' i, X h  => phi (X' i) (X' h)
+    | X' i, Xtop => phi (X' i) (X' j)
+    | X' i, X' h => phi (X' i) (X' h)
+    end.
+
+
 (* Tst *)
 Definition Tst := (nat + Top) -> bool.  (* a subset of registers *)
 
@@ -846,4 +862,258 @@ Proof.
   split;
   intros H';
   [apply P2ref | apply P1ref].
+Qed.
+
+Theorem at_most_one_Phi_eq_j :
+  forall j phi phi1 phi2,
+  is_equiv_rel phi1 /\ is_equiv_rel phi2 ->
+  composable phi phi1 /\ Phi_eq_j j phi1 ->
+  composable phi phi2 /\ Phi_eq_j j phi2
+  -> phi1 = phi2.
+Proof.
+  intros j phi phi1 phi2.
+  intros [P1eq P2eq].
+  intros [Hco1 Hphi1] [Hco2 Hphi2].
+
+  unfold is_equiv_rel in P1eq.
+  destruct P1eq as [P1ref [P1sym P1tra]].
+  unfold is_equiv_rel in P2eq.
+  destruct P2eq as [P2ref [P2sym P2tra]].
+
+  unfold composable in Hco1.
+  unfold composable in Hco2.
+
+  unfold Phi_eq_j in Hphi1;
+  destruct Hphi1 as [Hphi1T Hphi1].
+  unfold Phi_eq_j in Hphi2;
+  destruct Hphi2 as [Hphi2T Hphi2].
+
+  assert (HXhX'i : forall h i, phi1 (X h) (X' i) <-> phi2 (X h) (X' i)).
+  {
+  split; intro H.
+  + (* phi1 (X h) (X' i) -> phi2 (X h) (X' i) *)
+  apply (P2tra _ (X i)).
+  split.
+  * (* phi2 (X h) (X i) *)
+  apply Hco2.
+  apply Hco1.
+  apply (P1tra _ (X' i)).
+  auto.
+  * (* phi2 (X i) (X' i) *)
+  apply Hphi2.
+  + (* phi2 (X h) (X' i) -> phi1 (X h) (X' i) *)
+  apply (P1tra _ (X i)).
+  split.
+  * (* phi1 (X h) (X i) *)
+  apply Hco1.
+  apply Hco2.
+  apply (P2tra _ (X' i)).
+  auto.
+  * (* phi1 (X i) (X' i) *)
+  apply Hphi1.
+  }
+
+  assert (HXiXtop : forall i, phi1 (X i) Xtop <-> phi2 (X i) Xtop).
+  {
+  split; intro H.
+  + (* phi1 (X i) Xtop -> phi2 (X i) Xtop *)
+  apply (P2tra _ (X j)).
+  split.
+  * (* phi2 (X i) (X j) *)
+  apply Hco2.
+  apply Hco1.
+  apply (P1tra _ Xtop).
+  auto.
+  * (* phi2 (X j) Xtop *)
+  auto.
+  + (* phi2 (X i) Xtop -> phi1 (X i) Xtop *)
+  apply (P1tra _ (X j)).
+  split.
+  * (* phi1 (X i) (X j) *)
+  apply Hco1.
+  apply Hco2.
+  apply (P2tra _ Xtop).
+  auto.
+  * (* phi1 (X j) Xtop *)
+  auto.
+  }
+
+  apply Phi_extensionality.
+  intros x y.
+  case x; case y;
+  try intro i; try intro h;
+  try (rewrite<- Hco1; rewrite<- Hco2);
+  try (rewrite<- Hco1T; rewrite<- Hco2T);
+  try reflexivity.
+
+  - (* phi1 (X h) (X' i) <-> phi2 (X h) (X' i) *)
+  apply HXhX'i.
+  - (* phi1 (X i) Xtop <-> phi2 (X i) Xtop *)
+  apply HXiXtop.
+
+  - (* phi1 (X' h) (X i) <-> phi2 (X' h) (X i) *)
+  split.
+  + intros Hp1.
+  apply P2sym.
+  apply HXhX'i.
+  apply P1sym.
+  exact Hp1.
+  + intros Hp2.
+  apply P1sym.
+  apply HXhX'i.
+  apply P2sym.
+  exact Hp2.
+
+  - (* phi1 (X' h) (X' i) <-> phi2 (X' h) (X' i) *)
+  split; intros H.
+  + (* phi1 (X' h) (X' i) -> phi2 (X' h) (X' i) *)
+  apply (P2tra _ (X h)).
+  split.
+  * (* phi2 (X' h) (X h) *)
+  apply P2sym.
+  apply Hphi2.
+  * (* phi2 (X h) (X' i) *)
+  apply (P2tra _ (X i)).
+  split; auto.
+  apply Hco2.
+  apply Hco1.
+  apply (P1tra _ (X' h)).
+  split; auto.
+  apply (P1tra _ (X' i)).
+  split; auto.
+  + (* phi2 (X' h) (X' i) -> phi1 (X' h) (X' i) *)
+  apply (P1tra _ (X h)).
+  split.
+  * (* phi1 (X' h) (X h) *)
+  apply P1sym.
+  apply Hphi1.
+  * (* phi1 (X h) (X' i) *)
+  apply (P1tra _ (X i)).
+  split; auto.
+  apply Hco1.
+  apply Hco2.
+  apply (P2tra _ (X' h)).
+  split; auto.
+  apply (P2tra _ (X' i)).
+  split; auto.
+
+  - (* phi1 (X' i) Xtop <-> phi2 (X' i) Xtop *)
+  split; intro H.
+  + (* phi1 (X' i) Xtop -> phi2 (X' i) Xtop *)
+  apply (P2tra _ (X i)).
+  split; auto.
+  apply HXiXtop.
+  apply (P1tra _ (X' i)).
+  split; auto.
+  + (* phi2 (X' i) Xtop -> phi1 (X' i) Xtop *)
+  apply (P1tra _ (X i)).
+  split; auto.
+  apply HXiXtop.
+  apply (P2tra _ (X' i)).
+  split; auto.
+
+  - (* phi1 Xtop (X i) <-> phi2 Xtop (X i) *)
+  split; intro H.
+  + (* phi1 Xtop (X i) -> phi2 Xtop (X i) *)
+  apply P2sym.
+  apply HXiXtop.
+  auto.
+  + (* phi2 Xtop (X i) -> phi1 Xtop (X i) *)
+  apply P1sym.
+  apply HXiXtop.
+  auto.
+
+  - (* phi1 Xtop (X' i) <-> phi2 Xtop (X' i) *)
+  split; intro H.
+  + (* phi1 Xtop (X' i) -> phi2 Xtop (X' i) *)
+  apply P2sym.
+  apply (P2tra _ (X i)).
+  split; auto.
+  apply HXiXtop.
+  apply (P1tra _ (X' i)).
+  split; auto.
+  + (* phi2 Xtop (X' i) -> phi1 Xtop (X' i) *)
+  apply P1sym.
+  apply (P1tra _ (X i)).
+  split; auto.
+  apply HXiXtop.
+  apply (P2tra _ (X' i)).
+  split; auto.
+
+  - (* phi1 Xtop Xtop <-> phi2 Xtop Xtop *)
+  split; intro H; auto.
+Qed.
+
+Lemma phi_to_Phi_eq_j_is_equiv_rel :
+  forall j phi,
+  is_equiv_rel phi ->
+  is_equiv_rel (phi_to_Phi_eq_j j phi).
+Proof.
+  intros j phi.
+  intros [Pref [Psym Ptra]].
+  unfold is_equiv_rel.
+  split; [ | split].
+  - (* is_reflexive *)
+    unfold is_reflexive.
+    intros x.
+    case x; unfold phi_to_Phi_eq_j; auto.
+  - (* is_symmetric *)
+    unfold is_symmetric.
+    intros x y.
+    case x, y; unfold phi_to_Phi_eq_j; auto.
+  - (* is_transitive *)
+    unfold is_transitive.
+    intros x y z.
+    case x, y, z; unfold phi_to_Phi_eq_j;
+    try apply Ptra; auto.
+Qed.
+
+Lemma phi_is_composable_with_phi_to_Phi_eq_j :
+  forall j phi,
+  is_equiv_rel phi ->
+  composable phi (phi_to_Phi_eq_j j phi).
+Proof.
+  intros j phi.
+  intros Peq.
+  unfold composable.
+  unfold phi_to_Phi_eq_j.
+  intros i h.
+  reflexivity.
+Qed.
+
+Lemma phi_to_Phi_eq_j_is_Phi_eq_j :
+  forall j phi,
+  is_equiv_rel phi ->
+  Phi_eq_j j (phi_to_Phi_eq_j j phi).
+Proof.
+  intros j phi.
+  intros [Pref [Psym Ptra]].
+  unfold Phi_eq_j.
+  split.
+  - (* phi_to_Phi_eq_j j phi Xtop (X j) *)
+  unfold phi_to_Phi_eq_j.
+  auto.
+  - (* forall i, phi_to_Phi_eq_j j phi (X i) (X' i) *)
+  intro i.
+  unfold phi_to_Phi_eq_j.
+  auto.
+Qed.
+
+Theorem at_least_one_Phi_eq_j :
+  forall j phi,
+  is_equiv_rel phi ->
+    exists phi1,
+    is_equiv_rel phi1 /\
+    composable phi phi1 /\ Phi_eq_j j phi1.
+Proof.
+  intros j phi.
+  intros Peq.
+  exists (phi_to_Phi_eq_j j phi).
+  split; [| split].
+  - apply phi_to_Phi_eq_j_is_equiv_rel.
+  exact Peq.
+  - apply phi_is_composable_with_phi_to_Phi_eq_j.
+  exact Peq.
+  - apply phi_to_Phi_eq_j_is_Phi_eq_j.
+  exact Peq.
 Qed.
