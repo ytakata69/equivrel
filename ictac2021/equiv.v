@@ -104,6 +104,11 @@ Definition phi_to_Phi_eq_j (j : nat) (phi : Phi) : Phi :=
     | X' i, X' h => phi (X' i) (X' h)
     end.
 
+(* Freshness property *)
+Definition freshness_p (theta1 : Theta) (d1 : D) (theta2 theta3 : Theta) :=
+  (forall i j, (theta1 i = theta3 j -> (exists l, theta1 i = theta2 l))) /\
+  (forall j,         (d1 = theta3 j -> (exists l,       d1 = theta2 l))).
+
 
 (* Tst *)
 Definition Tst := (nat + Top) -> bool.  (* a subset of registers *)
@@ -1351,3 +1356,92 @@ Proof.
   exists l1; split; auto.
 Qed.
 
+(* freshness_p *)
+
+Lemma double_models_means_composable :
+  forall theta1 theta2 theta3 d1 d2 phi1 phi2,
+  (theta1, d1, theta2) |= phi1 /\
+  (theta2, d2, theta3) |= phi2 ->
+  composable phi1 phi2.
+Proof.
+  intros theta1 theta2 theta3 d1 d2 phi1 phi2.
+  unfold models.
+  unfold two_Theta_D_models_Phi.
+  intros [H1 H2].
+  destruct H1 as [_ [H12 _]].
+  destruct H2 as [H21 _].
+  unfold composable.
+  intros i j.
+  rewrite<- H12.
+  rewrite<- H21.
+  reflexivity.
+Qed.
+
+Lemma meanings_of_composition :
+  forall theta1 theta2 theta3 d1 d2 phi1 phi2,
+  is_equiv_rel phi1 ->
+  freshness_p theta1 d1 theta2 theta3 ->
+  (theta1, d1, theta2) |= phi1 /\
+  (theta2, d2, theta3) |= phi2 ->
+  (theta1, d1, theta3) |= composition phi1 phi2.
+Proof.
+  intros theta1 theta2 theta3 d1 d2 phi1 phi2.
+  intros P1eq.
+  destruct P1eq as [_ [P1sym _]].
+  intros F H.
+  unfold freshness_p in F.
+  destruct F as [F1 F2].
+  unfold models in H.
+  unfold two_Theta_D_models_Phi in H.
+  destruct H as [H1 H2].
+  destruct H1 as [H11 [H12 [H13 [H14 H15]]]].
+  destruct H2 as [H21 [H22 [H23 [H24 H25]]]].
+  unfold models.
+  unfold two_Theta_D_models_Phi.
+  unfold composition.
+  split; [| split; [| split; [| split]]].
+  - intros i j. auto.
+  - intros i j. auto.
+  - (* forall i j, theta1 i = theta3 j <->
+       exists l, phi1 (X i) (X' l) /\ phi2 (X l) (X' j) *)
+  intros i j.
+  split.
+  + intros H1.
+  apply F1 in H1 as H2.
+  destruct H2 as [l H2].
+  exists l.
+  rewrite<- H13.
+  rewrite<- H23.
+  split; auto.
+  rewrite<- H2.
+  exact H1.
+  + intros [l [H1 H2]].
+  apply H13 in H1.
+  apply H23 in H2.
+  rewrite H1.
+  exact H2.
+  - (* forall i, theta1 i = d1 <-> phi1 (X i) Xtop *)
+  intros i.
+  split; intro H; apply H14; exact H.
+  - (* forall i, theta3 i = d1 <-> exists l, phi1 Xtop X'l /\ phi2 Xl X'i *)
+  intros i.
+  split.
+  + intros H1.
+  symmetry in H1.
+  apply F2 in H1 as H2.
+  destruct H2 as [l H2].
+  exists l.
+  split.
+  * apply P1sym.
+  apply H15.
+  symmetry; auto.
+  * apply H23.
+  rewrite<- H2.
+  exact H1.
+  + intros [l [H1 H2]].
+  apply P1sym in H1.
+  apply H15 in H1.
+  apply H23 in H2.
+  rewrite<- H2.
+  exact H1.
+Qed.
