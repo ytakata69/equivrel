@@ -62,6 +62,10 @@ Definition Asgn := nat -> bool.  (* a subset of nat *)
 Definition update (theta : Theta) (asgn : Asgn) (d : D) : Theta :=
   fun j : nat => if asgn j then d else theta j.
 
+Parameter bot : D.
+Definition theta_bot : Theta :=
+  fun _ => bot.
+
 Axiom Theta_extensionality :
   forall theta theta' : Theta,
     (forall i, theta i = theta' i) -> theta = theta'.
