@@ -117,3 +117,46 @@ Definition config_R_config' (c1 : config) (c2 : config') : Prop :=
   end.
 
 Local Close Scope type_scope.
+
+Inductive sublist {X : Type} : list X -> list X -> Prop :=
+  | Sublist_nil    : forall l, sublist nil l
+  | Sublist_cons_right :
+      forall l1 l2 x, sublist l1 l2 -> sublist l1 (cons x l2)
+  | Sublist_cons_both :
+      forall l1 l2 x, sublist l1 l2 -> sublist (cons x l1) (cons x l2).
+
+Example sublist_example_1 :
+  sublist (cons 2 (cons 3 nil)) (cons 1 (cons 2 (cons 3 nil))).
+Proof.
+  apply Sublist_cons_right.
+  apply Sublist_cons_both.
+  apply Sublist_cons_both.
+  apply Sublist_nil.
+Qed.
+
+Definition proper_sublist {X : Type} (l1 l2 : list X) :=
+  match l2 with
+  | cons _ l2' => sublist l1 l2'
+  | nil => False
+  end.
+
+Example proper_sublist_example_1 :
+  proper_sublist (cons 2 (cons 3 nil)) (cons 1 (cons 2 (cons 3 nil))).
+Proof.
+  unfold proper_sublist.
+  apply Sublist_cons_both.
+  apply Sublist_cons_both.
+  apply Sublist_nil.
+Qed.
+
+Definition freshness_on_stack theta stack : Prop :=
+  forall u3 u2 u1,
+  sublist u3 (cons (bot, theta) stack) ->
+  proper_sublist u2 u3 ->
+  proper_sublist u1 u2 ->
+  match u1, u2, u3 with
+  | cons (d1, th1) _, cons (_, th2) _, cons (_, th3) _
+    => freshness_p th1 d1 th2 th3
+  | nil, _, _ => True
+  | _, _, _ => False
+  end.
