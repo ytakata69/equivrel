@@ -89,7 +89,7 @@ Definition update_stack' (u : Stack') com' :=
 Inductive moveA
   : config -> Sigma -> D -> config -> Prop :=
   | MoveA :
-    forall q1 q2 a d z u theta theta' zth tst asgn com,
+    forall tst asgn com q1 q2 a d z u theta theta' zth,
     ruleA q1 a tst q2 asgn com ->
     (theta, d, z) |= tst ->
     theta' = update theta asgn d ->
@@ -123,8 +123,6 @@ Inductive config_R_config'
     stack_R_stack' theta u phi v ->
     config_R_config' (q, theta, u) ((q, phi), v).
 
-Local Close Scope type_scope.
-
 (* Utility: sublist, proper_sublist *)
 
 Inductive sublist {X : Type} : list X -> list X -> Prop :=
@@ -155,3 +153,45 @@ Inductive freshness_on_stack
     sublist (cons (d3, th3) u3) (cons (bot, theta) stack) ->
     freshness_p th1 d1 th2 th3 ->
     freshness_on_stack theta stack.
+
+(* Theorems *)
+
+Lemma moveA_inversion :
+  forall q q' theta theta' u u' a d,
+  moveA (q, theta, u) a d (q', theta', u') ->
+  exists tst asgn com,
+  ruleA q a tst q' asgn com /\
+  theta' = update theta asgn d /\
+  u' = update_stack u theta' com.
+Proof.
+  intros q q' theta theta' u u' a d.
+  intros Hm.
+  inversion Hm as [tst asgn com].
+  exists tst, asgn, com.
+  split; [| split]; auto.
+Qed.
+
+Lemma bisimilar_1 :
+  forall q theta_n phi_n v u,
+  forall a d q' theta' v',
+  config_R_config' (q, theta_n, v) ((q, phi_n), u) ->
+  moveA (q, theta_n, v) a d (q', theta', v') ->
+  exists phi'' u',
+  moveA' ((q, phi_n), u) a ((q', phi''), u') /\
+  config_R_config' (q', theta', v') ((q', phi''), u').
+Proof.
+  intros q theta_n phi_n v u.
+  intros a d q' theta' v'.
+  intros HR HmA.
+  apply moveA_inversion in HmA as HrA.
+  destruct HrA as [tst [asgn [com [HrA [Hth' Hv']]]]].
+  case_eq u.
+Admitted.
+(*
+  case_eq com.
+  - intros Hcom.
+  rewrite Hcom in HrA.
+  apply (ruleA'_pop q phi_n a _ q' (composition (composition phi_n)) tst asgn) in HrA.
+  rewrite Hcom in Hv'.
+  unfold update_stack in Hv'.
+  *)
