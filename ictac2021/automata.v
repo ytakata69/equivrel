@@ -143,31 +143,15 @@ Proof.
   apply Sublist_nil.
 Qed.
 
-Definition proper_sublist {X : Type} (l1 l2 : list X) :=
-  match l2 with
-  | cons _ l2' => sublist l1 l2'
-  | nil => False
-  end.
-
-Example proper_sublist_example_1 :
-  proper_sublist (cons 2 (cons 3 nil)) (cons 1 (cons 2 (cons 3 nil))).
-Proof.
-  unfold proper_sublist.
-  apply Sublist_cons_both.
-  apply Sublist_cons_both.
-  apply Sublist_nil.
-Qed.
-
 (* Freshness on stack *)
 
-Definition freshness_on_stack theta stack : Prop :=
-  forall u3 u2 u1,
-  sublist u3 (cons (bot, theta) stack) ->
-  proper_sublist u2 u3 ->
-  proper_sublist u1 u2 ->
-  match u1, u2, u3 with
-  | cons (d1, th1) _, cons (_, th2) _, cons (_, th3) _
-    => freshness_p th1 d1 th2 th3
-  | nil, _, _ => True
-  | _, _, _ => False
-  end.
+Inductive freshness_on_stack
+  : Theta -> Stack -> Prop :=
+  | Freshness_on_stack :
+    forall theta stack,
+    forall u1 u2 u3 th1 th2 th3 d1 d2 d3,
+    sublist (cons (d1, th1) u1) u2 ->
+    sublist (cons (d2, th2) u2) u3 ->
+    sublist (cons (d3, th3) u3) (cons (bot, theta) stack) ->
+    freshness_p th1 d1 th2 th3 ->
+    freshness_on_stack theta stack.
