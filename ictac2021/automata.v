@@ -29,35 +29,34 @@ Inductive Com' :=
 Parameter ruleA :
   Q -> Sigma -> Tst -> Q -> Asgn -> Com -> Prop.
 
-Definition ruleA' (q'1 : Q') (a : Sigma) (phi1 : Phi)
-                  (q'2 : Q') (com' : Com') : Prop :=
-  match q'1, q'2 with
-  | (q1, phi2), (q2, phi') =>
-    composable phi1 phi2 /\
-    exists tst asgn,
-    match com' with
-    | skip' =>
-        ruleA q1 a tst q2 asgn skip /\
-        exists phi3,
-          composableT phi2 phi3 /\
-          Phi_tst_asgn tst asgn phi3 /\
-          phi' = composition phi2 phi3
-    | pop' =>
-        ruleA q1 a tst q2 asgn pop /\
-        exists phi3,
-          composableT phi2 phi3 /\
-          Phi_tst_asgn tst asgn phi3 /\
-          phi' = composition (composition phi1 phi2) phi3
-    | push' phi'' =>
-        exists j,
-          ruleA q1 a tst q2 asgn (push j) /\
-        exists phi3,
-          composableT phi2 phi3 /\
-          Phi_tst_asgn tst asgn phi3 /\
-          phi' = phi_to_Phi_eq_j j phi3 /\
-          phi'' = composition phi2 phi3
-    end
-  end.
+Inductive ruleA'
+  : Q' -> Sigma -> Phi -> Q' -> Com' -> Prop :=
+  | ruleA'_skip :
+    forall q1 phi2 a phi1 q2 phi3 tst asgn,
+    ruleA q1 a tst q2 asgn skip ->
+    composable phi1 phi2 ->
+    composableT phi2 phi3 ->
+    Phi_tst_asgn tst asgn phi3 ->
+    ruleA' (q1, phi2) a phi1
+           (q2, composition phi2 phi3) skip'
+  | ruleA'_pop :
+    forall q1 phi2 a phi1 q2 phi3 tst asgn,
+    ruleA q1 a tst q2 asgn pop ->
+    composable phi1 phi2 ->
+    composableT phi2 phi3 ->
+    Phi_tst_asgn tst asgn phi3 ->
+    ruleA' (q1, phi2) a phi1
+           (q2, composition (composition phi1 phi2) phi3) pop'
+  | ruleA'_push :
+    forall q1 phi2 a phi1 q2 phi3 tst asgn j,
+    ruleA q1 a tst q2 asgn (push j) ->
+    composable phi1 phi2 ->
+    composableT phi2 phi3 ->
+    Phi_tst_asgn tst asgn phi3 ->
+    ruleA' (q1, phi2) a phi1
+           (q2, phi_to_Phi_eq_j j phi3) (push' (composition phi2 phi3)).
+
+(* Configurations and transitions between configurations *)
 
 Definition Stack  := list (D * Theta).
 Definition Stack' := list Phi.
@@ -65,58 +64,68 @@ Definition Stack' := list Phi.
 Definition config  := Q  * Theta * Stack.
 Definition config' := Q' * Stack'.
 
-Definition moveA (c1 : config) a d (c2 : config) : Prop :=
-  match c1, c2 with
-  | (q1, theta, u), (q2, theta', u') =>
+Definition update_stack (u : Stack) theta com :=
+  match com with
+  | pop =>
     match u with
-    | cons (z, th) tl =>
-      exists tst asgn,
-      (theta, d, z) |= tst /\
-      theta' = update theta asgn d /\
-      exists com,
-      ruleA q1 a tst q2 asgn com /\
-      match com with
-      | pop  => u' = tl
-      | skip => u' = u
-      | push j => u' = cons (theta' j, theta') u
-      end
-    | nil => False
-    end
+     | cons _ u' => u'
+     | nil => nil
+     end
+  | skip => u
+  | push j => cons (theta j, theta) u
   end.
 
-Definition moveA' (c1 : config') a (c2 : config') : Prop :=
-  match c1, c2 with
-  | (q1, u), (q2, u') =>
+Definition update_stack' (u : Stack') com' :=
+  match com' with
+  | pop' =>
     match u with
-    | cons z tl =>
-      exists com',
-      ruleA' q1 a z q2 com' /\
-      match com' with
-      | pop'  => u' = tl
-      | skip' => u' = u
-      | push' z' => u' = cons z' u
-      end
-    | nil => False
-    end
+     | cons _ u' => u'
+     | nil => nil
+     end
+  | skip' => u
+  | push' z => cons z u
   end.
 
-Fixpoint stack_R_stack' theta u phi v :=
-  match u, v with
-  | cons (d, ptheta) u', cons pphi v' =>
-    (ptheta, d, theta) |= phi /\
-    stack_R_stack' ptheta u' pphi v'
-  | nil, nil =>
-    (theta_bot, bot, theta) |= phi
-  | _, _ => False
-  end.
+Inductive moveA
+  : config -> Sigma -> D -> config -> Prop :=
+  | MoveA :
+    forall q1 q2 a d z u theta theta' zth tst asgn com,
+    ruleA q1 a tst q2 asgn com ->
+    (theta, d, z) |= tst ->
+    theta' = update theta asgn d ->
+    moveA (q1, theta,  (cons (z, zth) u)) a d
+          (q2, theta', update_stack (cons (z, zth) u) theta' com).
 
-Definition config_R_config' (c1 : config) (c2 : config') : Prop :=
-  match c1, c2 with
-  | (q1, theta, u), ((q2, phi), v) =>
-    q1 = q2 /\ stack_R_stack' theta u phi v
-  end.
+Inductive moveA'
+  : config' -> Sigma -> config' -> Prop :=
+  | MoveA' :
+    forall q1 q2 a z u com',
+    ruleA' q1 a z q2 com' ->
+    moveA' (q1, (cons z u)) a
+           (q2, update_stack' (cons z u) com').
+
+Inductive stack_R_stack'
+  : Theta -> Stack -> Phi -> Stack' -> Prop :=
+  | Stack_R_stack'_nil :
+    forall theta phi,
+    (theta_bot, bot, theta) |= phi ->
+    stack_R_stack' theta nil phi nil
+  | Stack_R_stack'_cons :
+    forall theta ptheta d phi pphi u v,
+    (ptheta, d, theta) |= phi ->
+    stack_R_stack' ptheta u pphi v ->
+    stack_R_stack' theta (cons (d, ptheta) u) phi (cons pphi v).
+
+Inductive config_R_config'
+  : config -> config' -> Prop :=
+  | Config_R_config' :
+    forall q theta u phi v,
+    stack_R_stack' theta u phi v ->
+    config_R_config' (q, theta, u) ((q, phi), v).
 
 Local Close Scope type_scope.
+
+(* Utility: sublist, proper_sublist *)
 
 Inductive sublist {X : Type} : list X -> list X -> Prop :=
   | Sublist_nil    : forall l, sublist nil l
@@ -148,6 +157,8 @@ Proof.
   apply Sublist_cons_both.
   apply Sublist_nil.
 Qed.
+
+(* Freshness on stack *)
 
 Definition freshness_on_stack theta stack : Prop :=
   forall u3 u2 u1,
