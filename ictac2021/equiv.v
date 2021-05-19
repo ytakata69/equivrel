@@ -222,7 +222,7 @@ Proof.
     intros [H1 H2]; try rewrite H1; auto.
 Qed.
 
-Lemma phi_matches_is_Phi_test_asgn :
+Lemma phi_matches_is_Phi_tst_asgn :
   forall theta theta' d e tst asgn,
   (theta, d, e) |= tst /\ theta' = update theta asgn d
   ->
@@ -309,7 +309,7 @@ Proof.
     auto.
 Qed.
 
-Lemma meanings_of_phi_tst_asgn_1 :
+Lemma meanings_of_Phi_tst_asgn_1 :
   forall theta theta' e tst asgn,
   (exists phi,
      is_equiv_rel phi /\
@@ -522,7 +522,7 @@ Proof.
     discriminate.
 Qed.
 
-Lemma meanings_of_phi_tst_asgn_2 :
+Lemma meanings_of_Phi_tst_asgn_2 :
   forall theta theta' e tst asgn,
   (exists d,
     (theta, d, e) |= tst /\ theta' = update theta asgn d)
@@ -540,12 +540,12 @@ Proof.
     apply phi_matches_is_equiv_rel.
   - (* Phi_tst_asgn tst asgn phi *)
     generalize Hmo_up.
-    apply phi_matches_is_Phi_test_asgn.
+    apply phi_matches_is_Phi_tst_asgn.
   - (* (theta, e, theta') |= phi_matches theta e theta' *)
     apply theta_e_theta'_models_phi_matches.
 Qed.
 
-Theorem meanings_of_phi_tst_asgn :
+Theorem meanings_of_Phi_tst_asgn :
   forall theta theta' e tst asgn,
   (exists phi,
      is_equiv_rel phi /\
@@ -556,8 +556,8 @@ Theorem meanings_of_phi_tst_asgn :
     (theta, d, e) |= tst /\ theta' = update theta asgn d).
 Proof.
   split.
-  - apply meanings_of_phi_tst_asgn_1.
-  - apply meanings_of_phi_tst_asgn_2.
+  - apply meanings_of_Phi_tst_asgn_1.
+  - apply meanings_of_Phi_tst_asgn_2.
 Qed.
 
 (* Phi_eq_j *)
@@ -572,7 +572,7 @@ Proof.
   auto.
 Qed.
 
-Lemma meanings_of_phi_eq_j_1 :
+Lemma meanings_of_Phi_eq_j_1 :
   forall theta theta' e j,
   (exists phi,
      is_equiv_rel phi /\
@@ -603,7 +603,7 @@ Proof.
   apply HphiT.
 Qed.
 
-Lemma meanings_of_phi_eq_j_2 :
+Lemma meanings_of_Phi_eq_j_2 :
   forall theta theta' e j,
   (theta = theta' /\ theta j = e)
   ->
@@ -628,7 +628,7 @@ Proof.
   apply theta_e_theta'_models_phi_matches.
 Qed.
 
-Theorem meanings_of_phi_eq_j :
+Theorem meanings_of_Phi_eq_j :
   forall theta theta' e j,
   (exists phi,
      is_equiv_rel phi /\
@@ -638,8 +638,8 @@ Theorem meanings_of_phi_eq_j :
   (theta = theta' /\ theta j = e).
 Proof.
   split.
-  - apply meanings_of_phi_eq_j_1.
-  - apply meanings_of_phi_eq_j_2.
+  - apply meanings_of_Phi_eq_j_1.
+  - apply meanings_of_Phi_eq_j_2.
 Qed.
 
 (* Composable *)
