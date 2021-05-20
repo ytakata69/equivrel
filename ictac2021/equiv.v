@@ -1381,6 +1381,32 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma double_models_means_composableT :
+  forall theta1 theta2 theta3 d phi1 phi2,
+  (theta1, d, theta2) |= phi1 /\
+  (theta2, d, theta3) |= phi2 ->
+  composableT phi1 phi2.
+Proof.
+  intros theta1 theta2 theta3 d phi1 phi2.
+  unfold models.
+  unfold two_Theta_D_models_Phi.
+  intros [H1 H2].
+  destruct H1 as [_ [H12 [_ [_ H15]]]].
+  destruct H2 as [H21 [_ [_ [H24 _]]]].
+  unfold composableT.
+  split.
+  - (* composable phi1 phi2 *)
+  intros i j.
+  rewrite<- H12.
+  rewrite<- H21.
+  reflexivity.
+  - (* forall i, phi1 (X' i) Xtop <-> phi2 (X i) Xtop *)
+  intros i.
+  rewrite<- H15.
+  rewrite<- H24.
+  reflexivity.
+Qed.
+
 Lemma meanings_of_composition :
   forall theta1 theta2 theta3 d1 d2 phi1 phi2,
   is_equiv_rel phi1 ->
