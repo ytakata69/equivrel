@@ -243,8 +243,6 @@ Proof.
   apply IHu1; auto.
 Qed.
 
-
-
 (* is_proper_stack *)
 
 Lemma substack_is_proper_stack :
@@ -281,6 +279,75 @@ Proof.
   unfold freshness_p_on_stack.
   repeat rewrite app_comm_cons.
   apply Forall3_sublist.
+Qed.
+
+Lemma push_keeps_freshness_p :
+  forall theta u z,
+  freshness_p_on_stack theta u ->
+  freshness_p_on_stack theta ((z, theta) :: u).
+Proof.
+  intros theta u z.
+  unfold freshness_p_on_stack.
+  intros H.
+  apply Forall3_cons.
+  - (* Forall2 ... ((z, theta) :: u) *)
+  apply Forall2_cons.
+  + (* Forall ... u *)
+  apply Forall_forall.
+  intros [d1 th1] Hth1.
+  unfold freshness_p_on_triple.
+  unfold freshness_p.
+  split.
+  * (* forall i j, th1 i = ... -> ... *)
+  intros i j H1.
+  inversion H as [| x l Hfor2 Hfor3 [EQx EQl]].
+  clear x EQx l EQl Hfor3.
+  inversion Hfor2 as [EQu | x l Hfor Hfor2' EQx].
+  -- (* u = nil -> ... *)
+  rewrite<- EQu in Hth1.
+  apply in_nil in Hth1.
+  contradiction.
+  -- (* u = x :: l -> ... *)
+  exists j.
+  exact H1.
+  * (* forall j, d1 = ... -> ... *)
+  intros j H1.
+  exists j.
+  exact H1.
+  + (* Forall2 ... u *)
+  inversion H as [| x l Hfor2 Hfor3 [EQx EQl]].
+  clear x EQx l EQl Hfor3.
+  exact Hfor2.
+
+  - (* Forall3 ... ((theta j, ) :: u) *)
+  apply Forall3_cons.
+  + (* Forall2 ... u *)
+  induction u as [| [d1 th1] u IHu].
+  * (* u = nil -> ... *)
+  apply Forall2_nil.
+  * (* u = (d1, th1) :: u -> ... *)
+  apply Forall2_cons.
+  -- (* Forall ... u *)
+  apply Forall_forall.
+  intros [d2 th2] Hth2.
+  unfold freshness_p_on_triple.
+  inversion H as [| x l Hfor2 Hfor3 [EQx EQl]].
+  clear x EQx l EQl Hfor3.
+  inversion Hfor2 as [| x l Hfor Hfor2' [EQx EQl]].
+  clear x EQx l EQl Hfor2 Hfor2'.
+  rewrite Forall_forall in Hfor.
+  unfold freshness_p_on_triple in Hfor.
+  apply (Hfor (d2, th2)).
+  exact Hth2.
+  -- (* Forall2 ... u *)
+  apply IHu.
+  apply (Forall3_sublist _ (d1, th1) ((bot, theta) :: nil)).
+  unfold app.
+  exact H.
+  + (* Forall3 ... u *)
+  apply (Forall3_sublist _ (bot, theta) nil).
+  unfold app.
+  exact H.
 Qed.
 
 (* freshness_p_on_moveA *)
@@ -623,14 +690,24 @@ Qed.
 Lemma moveA_keeps_freshness_p :
   forall q theta u a d q' theta' u',
   moveA (q, theta, u) a d (q', theta', u') ->
+  is_proper_stack u ->
   freshness_p_on_stack theta u ->
   freshness_p_on_stack theta' u'.
 Proof.
   intros q theta u a d q' theta' u'.
-  intros HmA Hfresh.
+  intros HmA Hprop Hfresh.
   apply moveA_inversion in HmA as HrA.
   destruct HrA
   as [tst [asgn [com [z [zth [uu [HrA [Hu [Htst [Hth' [Hu' Hfrs_u]]]]]]]]]]].
+
+  assert (Hskip: freshness_p_on_stack theta' u).
+  {
+  rewrite Hth'.
+  rewrite Hu.
+  apply moveA_keeps_freshness_p_when_skip with tst;
+  try rewrite<- Hu; auto.
+  }
+
   case_eq com;
   [intros Hcom | intros Hcom | intros j Hcom];
   rewrite Hcom in Hu';
@@ -640,20 +717,20 @@ Proof.
   unfold update_stack in Hu'.
   - (* com = pop -> ... *)
   rewrite<- Hu' in Hu.
-  clear uu Hu'.
-  inversion Hfresh as [|x l Hfor2 Hfor3 [EQx EQl]].
-  clear x EQx l EQl.
-  unfold freshness_p_on_stack.
-  apply Forall3_cons.
-  + (* Forall2 ... *)
-  case_eq u'.
-  { intros. apply Forall2_nil. }
-  intros p l EQu'.
-  unfold freshness_p_on_moveA in Hfrs_u.
-  unfold freshness_p.
-
-
-Admitted.
+  apply (substack_keeps_freshness_p _ (z, zth) nil).
+  unfold app.
+  rewrite<- Hu.
+  exact Hskip.
+  - (* com = skip -> ... *)
+  rewrite<- Hu' in Hu.
+  rewrite<- Hu.
+  exact Hskip.
+  - (* com = push -> ... *)
+  rewrite Hu'.
+  apply push_keeps_freshness_p.
+  rewrite<- Hu.
+  exact Hskip.
+Qed.
 
 (* Theorem on bisimilarity *)
 
