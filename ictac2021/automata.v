@@ -243,72 +243,7 @@ Proof.
   apply IHu1; auto.
 Qed.
 
-Lemma Forall2_hd2 {A : Type} :
-  forall p (a : A) b u,
-  Forall2 p (a :: b :: u) ->
-  p a b.
-Proof.
-  intros p a b u H.
-  inversion H as [| x l Hfor Hfor2 [EQx EQl]].
-  clear x EQx l EQl H Hfor2.
-  inversion Hfor as [| x l H Hfor' [EQx EQl]].
-  exact H.
-Qed.
 
-Lemma Forall3_hd3 {A : Type} :
-  forall p (a : A) b c u,
-  Forall3 p (a :: b :: c :: u) ->
-  p a b c.
-Proof.
-  intros p a b c u H.
-  inversion H as [| x l Hfor2 Hfor3' [EQx EQl]].
-  clear x EQx l EQl Hfor3' H.
-  apply Forall2_hd2 with u.
-  exact Hfor2.
-Qed.
-
-Lemma Forall2_forall_inv {A : Type} :
-  forall (p : A -> A -> Prop) u,
-  (forall b c,
-   In b u -> In c u -> p b c) ->
-  Forall2 p u.
-Proof.
-  intros p u H.
-  induction u as [| a u IHu].
-  { apply Forall2_nil. }
-  apply Forall2_cons.
-  - induction u as [| b u IHu'].
-  { apply Forall_nil. }
-  apply Forall_cons.
-  + apply H.
-  * apply in_eq.
-  * apply in_cons. apply in_eq.
-  + apply IHu'.
-  * intros b' c Hb' Hc.
-  apply H.
-  -- destruct Hb' as [EQb' | Hb''].
-  ++ rewrite<- EQb'. apply in_eq.
-  ++ apply in_cons. apply in_cons. exact Hb''.
-  -- destruct Hc as [EQc | Hc'].
-  ++ rewrite<- EQc. apply in_eq.
-  ++ apply in_cons. apply in_cons. exact Hc'.
-  * intros H'.
-  apply (Forall2_sublist _ b nil).
-  unfold app.
-  apply IHu.
-  intros b' c Hb' Hc.
-  apply H.
-  -- destruct Hb' as [EQb' | Hb''].
-  ++ rewrite<- EQb'. apply in_cons. apply in_eq.
-  ++ apply in_cons. apply in_cons. exact Hb''.
-  -- destruct Hc  as [EQc  | Hc'].
-  ++ rewrite<- EQc. apply in_cons. apply in_eq.
-  ++ apply in_cons. apply in_cons. exact Hc'.
-  - apply IHu.
-  intros b c Hb Hc.
-  apply H;
-  apply in_cons; auto.
-Qed.
 
 (* is_proper_stack *)
 
@@ -318,24 +253,6 @@ Lemma substack_is_proper_stack :
   is_proper_stack (u1 ++ u2).
 Proof.
   apply Forall_sublist.
-Qed.
-
-Lemma substack_is_proper_stack_1 :
-  forall a u,
-  is_proper_stack (a :: u) ->
-  is_proper_stack u.
-Proof.
-  intros a u.
-  apply (Forall_sublist _ _ nil).
-Qed.
-
-Lemma substack_is_proper_stack_2 :
-  forall a b u,
-  is_proper_stack (a :: b :: u) ->
-  is_proper_stack (a :: u).
-Proof.
-  intros a b u.
-  apply (Forall_sublist _ _ (a :: nil)).
 Qed.
 
 (* freshness_p_on_stack *)
@@ -366,24 +283,6 @@ Proof.
   apply Forall3_sublist.
 Qed.
 
-Lemma substack_keeps_freshness_p_1 :
-  forall theta a u,
-  freshness_p_on_stack theta (a :: u) ->
-  freshness_p_on_stack theta u.
-Proof.
-  intros theta a u.
-  apply (substack_keeps_freshness_p _ _ nil u).
-Qed.
-
-Lemma substack_keeps_freshness_p_2 :
-  forall theta a b u,
-  freshness_p_on_stack theta (a :: b :: u) ->
-  freshness_p_on_stack theta (a :: u).
-Proof.
-  intros theta a b u.
-  apply (substack_keeps_freshness_p _ _ (a :: nil) u).
-Qed.
-
 (* freshness_p_on_moveA *)
 
 Lemma substack_keeps_freshness_p_on_moveA :
@@ -397,24 +296,6 @@ Proof.
   assert (Hfrs' := Hfrs Htst).
   generalize Hfrs'.
   apply (Forall_sublist _ a).
-Qed.
-
-Lemma substack_keeps_freshness_p_on_moveA_1 :
-  forall tst d a u,
-  freshness_p_on_moveA tst d (a :: u) ->
-  freshness_p_on_moveA tst d u.
-Proof.
-  intros tst d a u.
-  apply (substack_keeps_freshness_p_on_moveA _ _ _ nil).
-Qed.
-
-Lemma substack_keeps_freshness_p_on_moveA_2 :
-  forall tst d a b u,
-  freshness_p_on_moveA tst d (a :: b :: u) ->
-  freshness_p_on_moveA tst d (a :: u).
-Proof.
-  intros tst d a b u.
-  apply (substack_keeps_freshness_p_on_moveA _ _ _ (a :: nil)).
 Qed.
 
 (* moveA *)
