@@ -45,12 +45,21 @@ Definition composableT (phi1 phi2 : Phi) : Prop :=
 Definition composition (phi1 phi2 : Phi) : Phi :=
   fun x y : register =>
     match x, y with
-    | X _,  X' _ => exists l, phi1 x (X' l) /\ phi2 (X l) y
-    | X _,  _    => phi1 x y
-    | Xtop, X' j => exists l, phi1 x (X' l) /\ phi2 (X l) y
-    | Xtop, _    => phi1 x y
     | X' _, X' _ => phi2 x y
     | X' _, _    => exists l, phi1 y (X' l) /\ phi2 (X l) x
+    |    _, X' _ => exists l, phi1 x (X' l) /\ phi2 (X l) y
+    |    _,    _ => phi1 x y
+    end.
+
+Definition compositionT (phi1 phi2 : Phi) : Phi :=
+  fun x y : register =>
+    match x, y with
+    | X' _, X' _ => phi2 x y
+    | X' _, _    => (exists l, phi1 y (X' l) /\ phi2 (X l) x) \/
+                    (phi1 y Xtop /\ phi2 Xtop x)
+    |    _, X' _ => (exists l, phi1 x (X' l) /\ phi2 (X l) y) \/
+                    (phi1 x Xtop /\ phi2 Xtop y)
+    |    _,    _ => phi1 x y
     end.
 
 (* Assignments *)
@@ -113,6 +122,8 @@ Definition freshness_p (theta1 : Theta) (d1 : D) (theta2 theta3 : Theta) :=
   (forall i j, (theta1 i = theta3 j -> (exists l, theta1 i = theta2 l))) /\
   (forall j,         (d1 = theta3 j -> (exists l,       d1 = theta2 l))).
 
+Definition weak_freshness_p (theta1 : Theta) (d1 : D) (theta2 theta3 : Theta) :=
+  forall i j, (theta1 i = theta3 j -> ((exists l, theta1 i = theta2 l) \/ theta1 i = d1)).
 
 (* Tst *)
 Definition Tst := (nat + Top) -> bool.  (* a subset of registers *)
@@ -1138,6 +1149,19 @@ Proof.
   exact Peq.
 Qed.
 
+Lemma theta_models_phi_to_Phi_eq_j :
+  forall theta j phi z th,
+  (th, z, theta) |= phi ->
+  (theta, theta j, theta) |= phi_to_Phi_eq_j j phi.
+Proof.
+  intros theta j phi z th.
+  unfold models.
+  unfold two_Theta_D_models_Phi.
+  intros [H1 [H2 [H3 [H4 H5]]]].
+  unfold phi_to_Phi_eq_j.
+  split; auto.
+Qed.
+
 (* Composition *)
 
 Lemma composition_is_equiv_rel :
@@ -1287,6 +1311,236 @@ Proof.
   -- auto.
 Qed.
 
+Lemma compositionT_is_equiv_rel :
+  forall phi1 phi2,
+  is_equiv_rel phi1 /\ is_equiv_rel phi2 ->
+  composableT phi1 phi2 ->
+  is_equiv_rel (compositionT phi1 phi2).
+Proof.
+  intros phi1 phi2 [P1eq P2eq] Hc.
+  unfold is_equiv_rel.
+  destruct P1eq as [P1ref [P1sym P1tra]].
+  destruct P2eq as [P2ref [P2sym P2tra]].
+  split; [| split].
+  - (* is_reflexive *)
+  unfold is_reflexive.
+  intros x.
+  unfold composition.
+  case x.
+  + intros i; apply P1ref.
+  + intros i; apply P2ref.
+  + apply P1ref.
+  - (* is_symmetric *)
+  unfold is_symmetric.
+  intros x y.
+  unfold compositionT.
+  case x, y;
+  try apply P1sym; try apply P2sym;
+  intros [Htop | Htop];
+  try exists l;
+  auto.
+  - (* is_trasitive *)
+  unfold is_transitive.
+  intros x y z.
+  unfold compositionT.
+  case x.
+  + intro i. case y.
+  * intro j. case z.
+  -- intros l; apply P1tra; apply P2tra.
+  -- intros l [H1 [[l1 [H2 H3]] | [H2 H3]]].
+  ++ left. exists l1;
+  split; try apply (P1tra _ (X j)); auto.
+  ++ right. split; auto.
+  apply (P1tra _ (X j)).
+  split; auto.
+  -- intros [H1 H2].
+  apply (P1tra _ (X j)); auto.
+  * intro j. case z.
+  -- intro l.
+  intros [[[l1 [H11 H12]] | [H11 H12]] [[l2 [H21 H22]] | [H21 H22]]].
+  ++ apply (P1tra _ (X' l1));
+  split; auto.
+  apply (P1tra _ (X' l2));
+  split; auto.
+  apply Hc.
+  apply (P2tra _ (X' j));
+  split; auto.
+  ++ apply (P1tra _ (X' l1));
+  split; auto.
+  apply (P1tra _ Xtop);
+  split; auto.
+  apply Hc.
+  apply (P2tra _ (X' j));
+  split; auto.
+  ++ apply (P1tra _ Xtop);
+  split; auto.
+  apply (P1tra _ (X' l2)).
+  split; auto.
+  apply P1sym. apply Hc.
+  apply (P2tra _ (X' j));
+  split; auto.
+  ++ apply (P1tra _ Xtop);
+  split; auto.
+  -- intro l.
+  intros [H1 H3].
+  destruct H1 as [[l1 [H1 H2]] | [H1 H2]];
+  [left; exists l1 | right];
+  split; try apply (P2tra _ (X' j)); auto.
+  -- intros [H1 H2];
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]];
+  auto.
+  ++ apply (P1tra _ (X' l1));
+  split; auto.
+  apply (P1tra _ (X' l2));
+  split; auto.
+  apply Hc.
+  apply (P2tra _ (X' j));
+  split; auto.
+  ++ unfold composableT in Hc.
+  destruct Hc as [_ Hc].
+  apply (P1tra _ (X' l1)).
+  split; auto.
+  apply Hc.
+  apply (P2tra _ (X' j)).
+  split; auto.
+  * case z.
+  -- intro l. apply P1tra.
+  -- intros l [H1 H2].
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ left. exists l2.
+  split; try apply (P1tra _ Xtop); auto.
+  ++ right. split; auto.
+  -- intros [H1 H2]; auto.
+  + intro i. case y.
+  * intro j. case z.
+  -- intros l [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  [left; exists l1 | right];
+  split; auto;
+  apply (P1tra _ (X j));
+  auto.
+  -- intros l [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ apply (P2tra _ (X l1));
+  split; auto.
+  apply (P2tra _ (X l2));
+  split; auto.
+  apply Hc.
+  apply (P1tra _ (X j));
+  split; auto.
+  ++ apply (P2tra _ (X l1));
+  split; auto.
+  apply (P2tra _ Xtop);
+  split; auto.
+  apply Hc.
+  apply (P1tra _ (X j));
+  split; auto.
+  ++ apply (P2tra _ Xtop);
+  split; auto.
+  apply (P2tra _ (X l2));
+  split; auto.
+  apply P2sym.
+  apply Hc.
+  apply (P1tra _ (X j));
+  split; auto.
+  ++ apply (P2tra _ Xtop);
+  split; auto.
+  -- intros [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  [left; exists l1 | right];
+  split; try apply (P1tra _ (X j)); auto.
+  * intro j. case z.
+  -- intros l [H1 H2].
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]];
+  [left; exists l2 | right];
+  split; try apply (P2tra _ (X' j)); auto.
+  -- intro l. apply P2tra.
+  -- intros [H1 H2].
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]];
+  [left; exists l2 | right];
+  split; try apply (P2tra _ (X' j)); auto.
+  * case z.
+  -- intros l [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  [left; exists l1 | right];
+  split; try apply (P1tra _ Xtop); auto.
+  -- intros l [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ apply (P2tra _ (X l1));
+  split; auto.
+  apply (P2tra _ (X l2));
+  split; auto.
+  apply Hc.
+  apply (P1tra _ Xtop);
+  split; auto.
+  ++ apply (P2tra _ (X l1));
+  split; auto.
+  apply (P2tra _ Xtop);
+  split; auto.
+  apply Hc.
+  apply (P1tra _ Xtop);
+  split; auto.
+  ++ apply (P2tra _ Xtop);
+  split; auto.
+  apply (P2tra _ (X l2));
+  split; auto.
+  apply P2sym.
+  apply Hc.
+  apply (P1tra _ Xtop);
+  split; auto.
+  ++ apply (P2tra _ Xtop);
+  split; auto.
+  -- intros [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  [left; exists l1 | right];
+  split; auto.
+  + case y.
+  * intro j. case z.
+  -- intro l. apply P1tra.
+  -- intros l [H1 H2].
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]];
+  [left; exists l2 | right];
+  split; try apply (P1tra _ (X j)); auto.
+  -- intros _. apply P1ref.
+  * intro j. case z.
+  -- intros l [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ apply (P1tra _ (X' l1));
+  split; auto.
+  apply (P1tra _ (X' l2));
+  split; auto.
+  apply Hc.
+  apply (P2tra _ (X' j));
+  split; auto.
+  ++ apply (P1tra _ (X' l1));
+  split; auto.
+  apply (P1tra _ Xtop);
+  split; auto.
+  ++ apply (P1tra _ (X' l2));
+  split; auto.
+  apply P1sym.
+  apply Hc.
+  apply (P2tra _ (X' j));
+  split; auto.
+  ++ apply P1sym; auto.
+  -- intros l [H1 H2].
+  destruct H1 as [[l1 [H11 H12]] | [H11 H12]];
+  [left; exists l1 | right];
+  split; try apply (P2tra _ (X' j)); auto.
+  -- intros _. apply P1ref.
+  * case z.
+  -- intros l [_ H]; auto.
+  -- intros l [_ H2].
+  destruct H2 as [[l2 [H21 H22]] | [H21 H22]];
+  [left; exists l2 | right];
+  split; auto.
+  -- auto.
+Qed.
+
 Lemma composition_is_composable_1 :
   forall phi1 phi2 phi3,
   composable phi1 phi2 <->
@@ -1358,6 +1612,186 @@ Proof.
   intros [l1 [H3 [l2 [H1 H2]]]].
   exists l2; split; auto.
   exists l1; split; auto.
+Qed.
+
+Lemma compositionT_is_composable_1 :
+  forall phi1 phi2 phi3,
+  composable phi1 phi2 <->
+  composable phi1 (compositionT phi2 phi3).
+Proof.
+  intros phi1 phi2 phi3.
+  unfold composable.
+  unfold compositionT.
+  reflexivity.
+Qed.
+
+Lemma compositionT_is_composable_2 :
+  forall phi2 phi3 phi4,
+  composable phi3 phi4 <->
+  composable (compositionT phi2 phi3) phi4.
+Proof.
+  intros phi2 phi3 phi4.
+  unfold composable.
+  unfold compositionT.
+  reflexivity.
+Qed.
+
+Lemma compositionT_is_composableT_1 :
+  forall phi1 phi2 phi3,
+  composableT phi1 phi2 <->
+  composableT phi1 (compositionT phi2 phi3).
+Proof.
+  intros phi1 phi2 phi3.
+  unfold composableT.
+  unfold composable.
+  unfold compositionT.
+  reflexivity.
+Qed.
+
+Lemma compositionT_is_composableT_2 :
+  forall phi1 phi2 phi3,
+  is_equiv_rel phi1 -> is_equiv_rel phi2 ->
+  composableT phi1 phi2 ->
+  (composableT phi2 phi3 <->
+   composableT (compositionT phi1 phi2) phi3).
+Proof.
+  intros phi1 phi2 phi3.
+  intros EQ1 EQ2 Hc1.
+  destruct EQ1 as [P1ref [P1sym P1tra]].
+  destruct EQ2 as [_ [P2sym P2tra]].
+  unfold composableT.
+  unfold composable.
+  unfold compositionT.
+  split.
+  - intros [H1 H2].
+  split; auto.
+  intros i.
+  rewrite<- H2.
+  split.
+  + intros [[l [H3 H4]] | [H3 H4]].
+  * apply (P2tra _ (X l)).
+  split; auto.
+  apply Hc1.
+  auto.
+  * auto.
+  + intros H.
+  right.
+  auto.  
+  - intros [H1 H2].
+  split; split.
+  + rewrite<- H1. auto.
+  + rewrite<- H1. auto.
+  + rewrite<- H2.
+  intros H3.
+  right. auto.
+  + rewrite<- H2.
+  intros [[l [H31 H32]] | [H31 H32]].
+  * apply (P2tra _ (X l)).
+  split; auto.
+  apply Hc1.
+  auto.
+  * auto.
+Qed.
+
+Lemma compositionT_is_assoc :
+  forall phi1 phi2 phi3,
+  is_equiv_rel phi1 -> is_equiv_rel phi2 ->
+  composableT phi1 phi2 ->
+  compositionT (compositionT phi1 phi2) phi3
+  = compositionT phi1 (compositionT phi2 phi3).
+Proof.
+  intros phi1 phi2 phi3.
+  intros EQ1 EQ2 Hc1.
+  destruct EQ1 as [P1ref [_ P1tra]].
+  destruct EQ2 as [P2ref _].
+  apply Phi_extensionality.
+  intros x y.
+  split.
+  - unfold compositionT.
+  case x.
+  + intro i. case y; auto.
+  * intro j.
+  intros [[l1 [H1 H2]] | [H1 H2]].
+  -- destruct H1 as [[l2 [H11 H12]] | [H11 H12]].
+  ++ left; exists l2; split; auto.
+  left; exists l1; split; auto.
+  ++ right; split; auto.
+  left; exists l1; split; auto.
+  -- right; split; auto.
+  + intro i. case y; auto.
+  * intro j.
+  intros [[l1 [H1 H2]] | [H1 H2]].
+  -- destruct H1 as [[l2 [H11 H12]] | [H11 H12]].
+  ++ left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  ++ right; split; auto.
+     left; exists l1; split; auto.
+  -- right; split; auto.
+  * intros [[l1 [H1 H2]] | [H1 H2]].
+  -- destruct H1 as [[l2 [H11 H12]] | [H11 H12]].
+  ++ left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  ++ right; split; auto.
+     left; exists l1; split; auto.
+  -- right; split; auto.
+  + case y; auto.
+  intro i.
+  intros [[l1 [H1 H2]] | [H1 H2]].
+  * destruct H1 as [[l2 [H11 H12]] | [H11 H12]].
+  -- left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  -- right; split; auto.
+     left; exists l1; split; auto.
+  * right; split; auto.
+
+  - unfold compositionT.
+  case x.
+  + intro i. case y; auto.
+  intro j.
+  intros [[l1 [H1 H2]] | [H1 H2]].
+  * destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  -- left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  -- right; split; auto.
+  apply (P1tra _ (X' l1)).
+  split; auto.
+  apply Hc1.
+  auto.
+  * destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  -- left; exists l2; split; auto.
+  -- right; split; auto.
+  + intro i. case y; auto.
+  * intro j.
+  intros [[l1 [H1 H2]] | [H1 H2]].
+  -- destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  ++ right; split; auto.
+  apply (P1tra _ (X' l1)).
+  split; auto.
+  apply Hc1.
+  auto.
+  -- destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ left; exists l2; split; auto.
+  ++ right; split; auto.
+  * intros [[l1 [H1 H2]] | [H1 H2]].
+  -- destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  ++ right; split; auto.
+  -- destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  ++ left; exists l2; split; auto.
+  ++ right; split; auto.
+  + case y; auto.
+  intro i.
+  intros [[l1 [H1 H2]] | [H1 H2]].
+  * destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  -- left; exists l2; split; auto.
+     left; exists l1; split; auto.
+  -- right; split; auto.
+  * destruct H2 as [[l2 [H21 H22]] | [H21 H22]].
+  -- left; exists l2; split; auto.
+  -- right; split; auto.
 Qed.
 
 (* freshness_p *)
@@ -1474,4 +1908,83 @@ Proof.
   apply H23 in H2.
   rewrite<- H2.
   exact H1.
+Qed.
+
+Lemma meanings_of_compositionT :
+  forall theta1 theta2 theta3 d1 phi1 phi2,
+  is_equiv_rel phi1 ->
+  is_equiv_rel phi2 ->
+  weak_freshness_p theta1 d1 theta2 theta3 ->
+  (theta1, d1, theta2) |= phi1 /\
+  (theta2, d1, theta3) |= phi2 ->
+  (theta1, d1, theta3) |= compositionT phi1 phi2.
+Proof.
+  intros theta1 theta2 theta3 d1 phi1 phi2.
+  intros P1eq P2eq.
+  destruct P1eq as [P1ref [P1sym _]].
+  destruct P2eq as [_ [P2sym _]].
+  intros F.
+  unfold weak_freshness_p in F.
+  unfold models.
+  unfold two_Theta_D_models_Phi.
+  unfold compositionT.
+  intros [H1 H2].
+  destruct H1 as [H11 [H12 [H13 [H14 H15]]]].
+  destruct H2 as [H21 [H22 [H23 [H24 H25]]]].
+  split; auto; split; auto; [split; [| split]].
+  - (* forall i j, theta1 i = theta3 j <->
+       (exists l, phi1 (X i) (X' l) /\ phi2 (X l) (X' j)) \/
+       (phi1 (X i) Xtop /\ phi2 Xtop (X' j)) *)
+  intros i j.
+  split.
+  + intros H1.
+  apply F in H1 as H2.
+  destruct H2 as [[l H2] | H2].
+  * left.
+  exists l.
+  rewrite<- H13.
+  rewrite<- H23.
+  split; auto.
+  rewrite<- H2.
+  exact H1.
+  * right.
+  split.
+  -- apply H14. auto.
+  -- apply P2sym.
+  apply H25.
+  rewrite<- H1.
+  exact H2.
+  + intros [[l [H1 H2]] | [H1 H2]].
+  * apply H13 in H1.
+  apply H23 in H2.
+  rewrite H1.
+  exact H2.
+  * apply H14 in H1.
+  apply P2sym in H2.
+  apply H25 in H2.
+  rewrite H2.
+  exact H1.
+  - (* forall i, theta1 i = d1 <-> phi1 (X i) Xtop *)
+  intros i.
+  split; intro H; apply H14; exact H.
+  - (* forall i, theta3 i = d1 <->
+       (exists l, phi1 Xtop (X' l) /\ phi2 (X l) (X' i)) \/
+       (phi1 Xtop Xtop /\ phi2 Xtop (X' i)) *)
+  intros i.
+  split.
+  + intros H1.
+  right.
+  split; auto.
+  apply P2sym.
+  apply H25.
+  exact H1.
+  + intros [[l [H1 H2]] | [H1 H2]].
+  * apply P1sym in H1.
+  apply H15 in H1.
+  apply H23 in H2.
+  rewrite<- H2.
+  exact H1.
+  * apply H25.
+  apply P2sym.
+  exact H2.
 Qed.
