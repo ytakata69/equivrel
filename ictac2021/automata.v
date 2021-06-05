@@ -1132,4 +1132,62 @@ Lemma bisimilar_2 :
     moveA (q, theta_n, u) a d (q', theta', u') /\
     config_R_config' (q', theta', u') ((q', phi''), v').
 Proof.
+  intros q theta_n phi_n u v.
+  intros a q' phi'' v'.
+  intros HmA' HR.
+  intros Hfresh Hproper Hu_last Heq_phi_n Heq_v.
+
+  inversion HmA' as [q1 q2 a' phi1 vv com' HrA' [EQq1 EQv] EQa' [EQq2 EQv']].
+  clear q1 EQq1 q2 EQq2 a' EQa'.
+
+  case_eq u.
+  { (* u = nil -> ... *)
+  intro EQu.
+  rewrite EQu in HR.
+  apply config_R_nil_nil_2 in HR as Hv_nil.
+  rewrite Hv_nil in EQv.
+  discriminate EQv.
+  }
+  (* u = (z, th1) :: uu -> ... *)
+  intros [z th1] uu EQu.
+
+  inversion HR as [q1 theta1 u1 phi' v1 HsR [EQq1 EQth1 EQu1] [EQphi' EQv1]].
+  clear q1 EQq1 theta1 EQth1 u1 EQu1;
+  clear phi' EQphi' v1 EQv1.
+  inversion HsR
+  as [th2 phi' Hphi_n EQth2 Hu_nil |
+      th2 th1' d1 phi' phi1' u1 v1 Hphi_n HsR1 EQth2 EQu1 EQphi' EQv1].
+  { (* nil = u -> ... *)
+  rewrite EQu in Hu_nil;
+  discriminate Hu_nil.
+  }
+  (* ((d1, th1) :: u1) = u -> ... *)
+  clear th2 EQth2 phi' EQphi'.
+  rewrite EQu in EQu1.
+  injection EQu1; clear EQu1.
+  intros EQu1 EQth1 EQd1.
+  rewrite EQu1 in HsR1; clear u1 EQu1.
+  rewrite EQd1 in Hphi_n; clear d1 EQd1.
+  rewrite EQth1 in HsR1.
+  rewrite EQth1 in Hphi_n; clear th1' EQth1.
+  rewrite<- EQv in EQv1.
+  injection EQv1; clear EQv1.
+  intros EQv1 EQphi1'.
+  rewrite EQv1 in HsR1; clear v1 EQv1.
+  rewrite EQphi1' in HsR1; clear phi1' EQphi1'.
+
+  (* composable phi1 phi_n *)
+  assert (Hphi_1_n: composable phi1 phi_n).
+  { inversion HsR1
+  as [th2 phi1' Hphi1 EQth2 EQuu EQphi1' EQvv |
+     th2 th1' d1 phi' phi1' uu1 vv1 Hphi' HsR2 EQth2 EQuu1 EQphi' EQvv1].
+  -- (* nil = vv -> ... *)
+  apply (double_models_means_composable theta_bot th1 theta_n bot z);
+  auto.
+  -- (* (phi1' :: vv1) = vv -> ... *)
+  apply (double_models_means_composable th1' th1 theta_n d1 z);
+  auto.
+  }
+
+
 Admitted.
