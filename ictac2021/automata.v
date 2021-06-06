@@ -874,15 +874,6 @@ Proof.
   exact Hproper.
 Qed.
 
-Lemma no_moveA_on_nil :
-  forall q q' theta theta' a d v',
-  ~ moveA (q, theta, nil) a d (q', theta', v').
-Proof.
-  intros q q' theta theta' a d v'.
-  intro H.
-  inversion H.
-Qed.
-
 (* config_R_config' *)
 
 Local Lemma config_R_nil_nil_1 :
@@ -966,8 +957,6 @@ Proof.
   intros EQu1 EQth1 EQd1.
   rewrite EQu1 in HsR1; clear u1 EQu1.
   rewrite EQd1 in Hphi_n; clear d1 EQd1.
-(*  rewrite<- EQth1 in EQu; clear zth EQth1.
-*)
   rewrite EQv in EQv1.
   injection EQv1; clear EQv1.
   intros EQv1 EQphi1'.
@@ -1043,25 +1032,21 @@ Proof.
   unfold last in Hu_last.
   injection Hu_last.
   intros EQth1' EQz.
-  rewrite EQth1 in Hphi1.
-  rewrite EQth1' in Hphi1.
-  rewrite EQth1 in Hphi_n.
-  rewrite EQth1' in Hphi_n.
-  rewrite EQz in Hphi_n.
-  rewrite EQz in Hphi3.
+  rewrite EQth1' in EQth1.
 
   unfold freshness_p_on_moveA in Hfrs_m.
 
   apply Stack_R_stack'_nil.
-  apply (meanings_of_composition theta_bot theta_bot theta' bot bot);
+  apply (meanings_of_composition theta_bot th1 theta' bot z);
   auto.
   -- (* is_equiv_rel phi1 *)
   rewrite Forall_forall in Heq_v.
   apply Heq_v.
   rewrite EQv.
   apply in_eq.
-  -- (* freshness_p theta_bot bot theta_bot theta' *)
+  -- (* freshness_p theta_bot bot th1 theta' *)
   unfold freshness_p.
+  rewrite EQth1.
   split.
   ++ intros i j H.
   exists i.
@@ -1070,15 +1055,9 @@ Proof.
   exists j.
   unfold theta_bot.
   reflexivity.
-  -- (* (theta_bot,bot,theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT theta_bot theta_n theta' bot);
+  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
+  apply (meanings_of_compositionT th1 theta_n theta' z);
   auto.
-  ++ (* weak_freshness_p theta_bot bot theta_n theta' *)
-  unfold weak_freshness_p.
-  intros i j H.
-  right.
-  unfold theta_bot.
-  reflexivity.
 
   * (* vv = phi0 :: vv -> ... *)
   inversion HsR1
@@ -1398,23 +1377,20 @@ Proof.
   unfold last in Hu_last.
   injection Hu_last.
   intros EQth1 EQz.
-  rewrite EQth1 in Hphi1.
-  rewrite EQth1 in Hphi_n.
-  rewrite EQz in Hphi_n.
-  rewrite EQz in Hphi3.
 
   unfold freshness_p_on_moveA in Hfrs_m.
 
   apply Stack_R_stack'_nil.
-  apply (meanings_of_composition theta_bot theta_bot theta' bot bot);
+  apply (meanings_of_composition theta_bot th1 theta' bot z);
   auto.
   -- (* is_equiv_rel phi1 *)
   rewrite Forall_forall in Heq_v.
   apply Heq_v.
   rewrite<- EQv.
   apply in_eq.
-  -- (* freshness_p theta_bot bot theta_bot theta' *)
+  -- (* freshness_p theta_bot bot th1 theta' *)
   unfold freshness_p.
+  rewrite EQth1.
   split.
   ++ intros i j H.
   exists i.
@@ -1423,15 +1399,9 @@ Proof.
   exists j.
   unfold theta_bot.
   reflexivity.
-  -- (* (theta_bot,bot,theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT theta_bot theta_n theta' bot);
+  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
+  apply (meanings_of_compositionT th1 theta_n theta' z);
   auto.
-  ++ (* weak_freshness_p theta_bot bot theta_n theta' *)
-  unfold weak_freshness_p.
-  intros i j H.
-  right.
-  unfold theta_bot.
-  reflexivity.
 
   * (* uu = (d0, th0) :: uu -> ... *)
   inversion HsR1
