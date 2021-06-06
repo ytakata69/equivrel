@@ -506,6 +506,74 @@ Proof.
   apply (Forall_sublist _ a).
 Qed.
 
+(* weak_freshness_p *)
+
+Lemma update_has_weak_freshness_p :
+  forall th1 theta z d tst asgn u,
+  (theta, d, z) |= tst ->
+  freshness_p_on_moveA tst d ((z, th1) :: u) ->
+  weak_freshness_p th1 z theta (update theta asgn d).
+Proof.
+  intros th1 theta z d tst asgn u.
+  intros Htst Hfrs_m.
+  unfold weak_freshness_p.
+  intros i j.
+  intros H.
+  unfold update in H.
+  destruct (tst_is_empty_or_not tst)
+  as [Htst_empty | Htst_not_empty].
+  ++ (* tst_empty -> ... *)
+  apply Hfrs_m in Htst_empty as Hfrs_m'.
+  rewrite Forall_forall in Hfrs_m'.
+  assert (Hzin : In (z, th1) ((z, th1) :: u)).
+  { apply in_eq. }
+  assert (Hm := Hfrs_m' (z, th1) Hzin).
+  simpl in Hm.
+  generalize dependent H.
+  case (asgn j); intro H.
+  ** (* asgn j = true -> ... *)
+  apply Hm in H.
+  contradiction.
+  ** (* asgn j = false -> ... *)
+  left.
+  exists j.
+  exact H.
+  ++ (* tst_not_empty -> ... *)
+  clear Hfrs_m.
+  unfold models in Htst.
+  unfold Theta_D_D_models_Tst in Htst.
+  destruct Htst as [Htst' Htst_top].
+  destruct Htst_not_empty as [xi Htst_true].
+  unfold freshness_p.
+  case_eq xi.
+  ** (* xi = inl n -> ... *)
+  intros n EQxi.
+  rewrite EQxi in Htst_true.
+  rewrite<- Htst' in Htst_true.
+  clear xi EQxi.
+  left.
+  generalize dependent H.
+  case (asgn j); intro H.
+  --- exists n.
+  rewrite Htst_true.
+  exact H.
+  --- exists j.
+  exact H.
+  ** (* xi = inr top -> ... *)
+  intros t EQxi.
+  destruct t.
+  rewrite EQxi in Htst_true.
+  rewrite<- Htst_top in Htst_true.
+  clear xi EQxi.
+  generalize dependent H.
+  case (asgn j); intro H.
+  --- right.
+  rewrite Htst_true.
+  exact H.
+  --- left. exists j.
+  exact H.
+Qed.
+
 (* moveA *)
 
 Lemma keeping_freshness_p_when_skip :
@@ -735,7 +803,6 @@ Proof.
   apply (Forall3_sublist _ (bot, theta) nil); auto.
 Qed.
 
-
 Lemma moveA_inversion :
   forall q q' theta theta' u u' a d,
   moveA (q, theta, u) a d (q', theta', u') ->
@@ -956,65 +1023,9 @@ Proof.
 
   (* weak_freshness_p th1 z theta_n theta' *)
   assert (Hwfrs: weak_freshness_p th1 z theta_n theta').
-  { unfold weak_freshness_p.
-  intros i j.
-  intros H.
-  rewrite EQth' in H.
-  unfold update in H.
-
-  destruct (tst_is_empty_or_not tst)
-  as [Htst_empty | Htst_not_empty].
-  ++ (* tst_empty -> ... *)
-  apply Hfrs_m in Htst_empty as Hfrs_m'.
-  rewrite Forall_forall in Hfrs_m'.
-  assert (Hzin : In (z, th1) u).
-  { rewrite EQu. apply in_eq. }
-  assert (Hm := Hfrs_m' (z, th1) Hzin).
-  simpl in Hm.
-  generalize dependent H.
-  case (asgn j); intro H.
-  ** (* asgn j = true -> ... *)
-  apply Hm in H.
-  contradiction.
-  ** (* asgn j = false -> ... *)
-  left.
-  exists j.
-  exact H.
-  ++ (* tst_not_empty -> ... *)
-  clear Hfrs_m.
-  unfold models in Htst.
-  unfold Theta_D_D_models_Tst in Htst.
-  destruct Htst as [Htst' Htst_top].
-  destruct Htst_not_empty as [xi Htst_true].
-  unfold freshness_p.
-  case_eq xi.
-  ** (* xi = inl n -> ... *)
-  intros n EQxi.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst' in Htst_true.
-  clear xi EQxi.
-  left.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- exists n.
-  rewrite Htst_true.
-  exact H.
-  --- exists j.
-  exact H.
-  ** (* xi = inr top -> ... *)
-  intros t EQxi.
-  destruct t.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst_top in Htst_true.
-  clear xi EQxi.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- right.
-  rewrite Htst_true.
-  exact H.
-  --- left. exists j.
-  exact H.
-  }
+  { rewrite EQth'.
+  apply (update_has_weak_freshness_p th1 theta_n z d tst asgn uu);
+  try rewrite<- EQu; auto. }
 
   (* phi3 *)
   assert (HtstEQth' := conj Htst EQth').
@@ -1299,114 +1310,100 @@ Proof.
   rewrite EQv1 in HsR1; clear v1 EQv1.
   rewrite EQphi1' in HsR1; clear phi1' EQphi1'.
 
-  case_eq com'.
-  - (* com' = pop' -> ... *)
-  intros Hcom'.
-  rewrite Hcom' in EQv'.
-  rewrite Hcom' in HrA'.
-  clear com' Hcom'.
   inversion HrA' as
-  [|q1 phi_n' a' phi1' q2 phi3 tst asgn HrA HrAp
-    [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi'']|].
-  clear q1 EQq1 q2 EQq2 a' EQa' phi_n' EQphi_n' phi1' EQphi1'.
-  destruct HrAp as [Hphi_1_n [Hphi_n_3 [Htst_phi3 P3eq]]].
+  [q1 phi_n' a' phi1' q2 phi3 tst asgn HrA HrAp
+   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] Hcom'
+  |q1 phi_n' a' phi1' q2 phi3 tst asgn HrA HrAp
+   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] Hcom'
+  |q1 phi_n' a' phi1' q2 phi3 tst asgn j' HrA HrAp
+   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] Hcom'];
+  clear q1 EQq1 q2 EQq2 a' EQa' phi_n' EQphi_n' phi1' EQphi1';
+  rewrite<- Hcom' in EQv';
+  rewrite<- Hcom' in HrA';
+  clear com' Hcom';
+  destruct HrAp as [Hphi_1_n [Hphi_n_3 [Htst_phi3 P3eq]]];
   assert (H := updater_must_exist
     theta_n z tst asgn th1 u phi_n phi3
-    Hphi_n Htst_phi3 P3eq Hphi_n_3).
-  destruct H as [d [Htst Hfrs_m]].
-  exists d.
-  exists (update theta_n asgn d).
-  exists (update_stack u (update theta_n asgn d) pop).
-  rewrite EQu.
-  rewrite EQu in Hfrs_m.
+    Hphi_n Htst_phi3 P3eq Hphi_n_3);
+  destruct H as [d [Htst Hfrs_m]];
 
   (* EQth': theta' = update theta_n asgn d *)
-  remember (update theta_n asgn d) as theta' eqn:EQth'.
+  remember (update theta_n asgn d) as theta' eqn:EQth';
 
   (* Hfresh': freshness_p_on_stack theta' u *)
-  assert (Hfresh': freshness_p_on_stack theta' u).
-  { rewrite EQth'. rewrite EQu.
-  rewrite EQu in Hproper.
-  rewrite EQu in Hfresh.
-  apply moveA_keeps_freshness_p_when_skip with tst;
-  auto. }
+  rewrite EQu in Hproper;
+  rewrite EQu in Hfresh;
+  rewrite EQu in Hfrs_m;
+  apply (moveA_keeps_freshness_p_when_skip theta_n th1 d z uu tst asgn
+  Htst Hproper Hfrs_m)
+  in Hfresh as Hfresh';
+  rewrite<- EQth' in Hfresh';
 
   (* Hphi3: (theta_n, z, theta') |= phi3 *)
-  assert (Htst_th' := conj Htst EQth').
-  apply ex_intro with (x := d) in Htst_th'.
-  apply meanings_of_Phi_tst_asgn in Htst_th'.
-  destruct Htst_th' as [phi3' [P3'eq [Htst_phi3' Hphi3]]].
-  assert (EQphi3' : phi3 = phi3').
-  { apply at_most_one_Phi_tst_asgn with tst asgn phi_n; auto.
-  split; auto.
-  apply (double_models_means_composableT th1 theta_n theta' z).
-  split; auto.
-  }
-  rewrite<- EQphi3' in Hphi3.
-  clear phi3' EQphi3' P3'eq Htst_phi3'.
+  assert (Htst_th' := conj Htst EQth');
+  apply ex_intro with (x := d) in Htst_th';
+  apply meanings_of_Phi_tst_asgn in Htst_th';
+  destruct Htst_th' as [phi3' [P3'eq [Htst_phi3' Hphi3]]];
+  assert (Hphi_n_3' := conj Hphi_n Hphi3);
+  apply (double_models_means_composableT th1 theta_n theta' z phi_n phi3')
+  in Hphi_n_3';
+  assert (EQphi3' := conj Hphi_n_3' Htst_phi3');
+  apply (at_most_one_Phi_tst_asgn tst asgn phi_n phi3 phi3'
+  (conj P3eq P3'eq) (conj Hphi_n_3 Htst_phi3)) in EQphi3';
+  rewrite<- EQphi3' in Hphi3;
+  clear phi3' EQphi3' P3'eq Htst_phi3' Hphi_n_3';
 
   (* weak_freshness_p th1 z theta_n theta' *)
-  assert (Hwfrs: weak_freshness_p th1 z theta_n theta').
-  { unfold weak_freshness_p.
-  intros i j.
-  intros H.
-  rewrite EQth' in H.
-  unfold update in H.
+  assert (Hwfrs := update_has_weak_freshness_p th1 theta_n z d tst asgn uu
+    Htst Hfrs_m);
+  rewrite<- EQth' in Hwfrs.
 
-  destruct (tst_is_empty_or_not tst)
-  as [Htst_empty | Htst_not_empty].
-  ++ (* tst_empty -> ... *)
-  apply Hfrs_m in Htst_empty as Hfrs_m'.
-  rewrite Forall_forall in Hfrs_m'.
-  assert (Hzin : In (z, th1) ((z, th1) :: uu)).
-  { apply in_eq. }
-  assert (Hm := Hfrs_m' (z, th1) Hzin).
-  simpl in Hm.
-  generalize dependent H.
-  case (asgn j); intro H.
-  ** (* asgn j = true -> ... *)
-  apply Hm in H.
-  contradiction.
-  ** (* asgn j = false -> ... *)
-  left.
-  exists j.
-  exact H.
-  ++ (* tst_not_empty -> ... *)
-  clear Hfrs_m.
-  unfold models in Htst.
-  unfold Theta_D_D_models_Tst in Htst.
-  destruct Htst as [Htst' Htst_top].
-  destruct Htst_not_empty as [xi Htst_true].
-  unfold freshness_p.
-  case_eq xi.
-  ** (* xi = inl n -> ... *)
-  intros n EQxi.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst' in Htst_true.
-  clear xi EQxi.
-  left.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- exists n.
-  rewrite Htst_true.
-  exact H.
-  --- exists j.
-  exact H.
-  ** (* xi = inr top -> ... *)
-  intros t EQxi.
-  destruct t.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst_top in Htst_true.
-  clear xi EQxi.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- right.
-  rewrite Htst_true.
-  exact H.
-  --- left. exists j.
-  exact H.
-  }
+  - (* com' = skip' -> ... *)
+  exists d.
+  exists theta'.
+  exists (update_stack u theta' skip).
+  rewrite EQu.
+  split.
+  + (* moveA ... *)
+  apply MoveA with tst asgn; auto.
 
+  + (* config_R_config' ... *)
+  rewrite<- EQv' in HmA'.
+  clear v' EQv'.
+
+  unfold update_stack.
+  unfold update_stack'.
+  apply Config_R_config'.
+
+  inversion HsR1
+  as [th1' phi1' Hphi1 EQth1' EQuu EQphi1' EQvv |
+      th1' th0 d0 phi1' phi0' uu' vv' Hphi1 HsR2
+      EQth1' EQuu EQphi1' [EQphi0' EQvv]].
+  * (* nil = vv -> ...*)
+  clear th1' EQth1' phi1' EQphi1' EQvv.
+
+  apply Stack_R_stack'_cons.
+  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
+  apply meanings_of_compositionT with theta_n;
+  auto.
+  -- (* stack_R_stack' th1 nil phi1 nil *)
+  apply Stack_R_stack'_nil.
+  auto.
+  * (* phi0' :: vv' = vv -> ...*)
+  clear th1' EQth1' phi1' EQphi1'.
+  apply Stack_R_stack'_cons.
+  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
+  apply (meanings_of_compositionT th1 theta_n theta');
+  auto.
+  -- (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
+  apply Stack_R_stack'_cons;
+  auto.
+
+  - (* com' = pop' -> ... *)
+  exists d.
+  exists theta'.
+  exists (update_stack u theta' pop).
+  rewrite EQu.
   split.
   + (* moveA ... *)
   apply MoveA with tst asgn; auto.
@@ -1485,7 +1482,6 @@ Proof.
   rewrite<- EQv.
   apply in_eq.
   -- (* freshness_p th0 d0 th1 theta' *)
-  rewrite EQu in Hfresh'.
   unfold freshness_p_on_stack in Hfresh'.
   apply Forall3_hd3 in Hfresh'.
   unfold freshness_p_on_triple in Hfresh'.
@@ -1495,256 +1491,11 @@ Proof.
   apply meanings_of_compositionT with theta_n;
   auto.
 
-  - (* com' = skip' -> ... *)
-  intros Hcom'.
-  rewrite Hcom' in EQv'.
-  rewrite Hcom' in HrA'.
-  clear com' Hcom'.
-  inversion HrA' as
-  [q1 phi_n' a' phi1' q2 phi3 tst asgn HrA HrAp
-   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi'']| |].
-  clear q1 EQq1 q2 EQq2 a' EQa' phi_n' EQphi_n' phi1' EQphi1'.
-  destruct HrAp as [Hphi_1_n [Hphi_n_3 [Htst_phi3 P3eq]]].
-  assert (H := updater_must_exist
-    theta_n z tst asgn th1 u phi_n phi3
-    Hphi_n Htst_phi3 P3eq Hphi_n_3).
-  destruct H as [d [Htst Hfrs_m]].
-  exists d.
-  exists (update theta_n asgn d).
-  exists (update_stack u (update theta_n asgn d) skip).
-  rewrite EQu.
-  rewrite EQu in Hfrs_m.
-
-  (* EQth': theta' = update theta_n asgn d *)
-  remember (update theta_n asgn d) as theta' eqn:EQth'.
-
-  (* Hfresh': freshness_p_on_stack theta' u *)
-  assert (Hfresh': freshness_p_on_stack theta' u).
-  { rewrite EQth'. rewrite EQu.
-  rewrite EQu in Hproper.
-  rewrite EQu in Hfresh.
-  apply moveA_keeps_freshness_p_when_skip with tst;
-  auto. }
-
-  (* Hphi3: (theta_n, z, theta') |= phi3 *)
-  assert (Htst_th' := conj Htst EQth').
-  apply ex_intro with (x := d) in Htst_th'.
-  apply meanings_of_Phi_tst_asgn in Htst_th'.
-  destruct Htst_th' as [phi3' [P3'eq [Htst_phi3' Hphi3]]].
-  assert (EQphi3' : phi3 = phi3').
-  { apply at_most_one_Phi_tst_asgn with tst asgn phi_n; auto.
-  split; auto.
-  apply (double_models_means_composableT th1 theta_n theta' z).
-  split; auto.
-  }
-  rewrite<- EQphi3' in Hphi3.
-  clear phi3' EQphi3' P3'eq Htst_phi3'.
-
-  (* weak_freshness_p th1 z theta_n theta' *)
-  assert (Hwfrs: weak_freshness_p th1 z theta_n theta').
-  { unfold weak_freshness_p.
-  intros i j.
-  intros H.
-  rewrite EQth' in H.
-  unfold update in H.
-
-  destruct (tst_is_empty_or_not tst)
-  as [Htst_empty | Htst_not_empty].
-  ++ (* tst_empty -> ... *)
-  apply Hfrs_m in Htst_empty as Hfrs_m'.
-  rewrite Forall_forall in Hfrs_m'.
-  assert (Hzin : In (z, th1) ((z, th1) :: uu)).
-  { apply in_eq. }
-  assert (Hm := Hfrs_m' (z, th1) Hzin).
-  simpl in Hm.
-  generalize dependent H.
-  case (asgn j); intro H.
-  ** (* asgn j = true -> ... *)
-  apply Hm in H.
-  contradiction.
-  ** (* asgn j = false -> ... *)
-  left.
-  exists j.
-  exact H.
-  ++ (* tst_not_empty -> ... *)
-  clear Hfrs_m.
-  unfold models in Htst.
-  unfold Theta_D_D_models_Tst in Htst.
-  destruct Htst as [Htst' Htst_top].
-  destruct Htst_not_empty as [xi Htst_true].
-  unfold freshness_p.
-  case_eq xi.
-  ** (* xi = inl n -> ... *)
-  intros n EQxi.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst' in Htst_true.
-  clear xi EQxi.
-  left.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- exists n.
-  rewrite Htst_true.
-  exact H.
-  --- exists j.
-  exact H.
-  ** (* xi = inr top -> ... *)
-  intros t EQxi.
-  destruct t.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst_top in Htst_true.
-  clear xi EQxi.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- right.
-  rewrite Htst_true.
-  exact H.
-  --- left. exists j.
-  exact H.
-  }
-
-  split.
-  + (* moveA ... *)
-  apply MoveA with tst asgn; auto.
-
-  + (* config_R_config' ... *)
-  rewrite<- EQv' in HmA'.
-  clear v' EQv'.
-
-  unfold update_stack.
-  unfold update_stack'.
-  apply Config_R_config'.
-
-  inversion HsR1
-  as [th1' phi1' Hphi1 EQth1' EQuu EQphi1' EQvv |
-      th1' th0 d0 phi1' phi0' uu' vv' Hphi1 HsR2
-      EQth1' EQuu EQphi1' [EQphi0' EQvv]].
-  * (* nil = vv -> ...*)
-  clear th1' EQth1' phi1' EQphi1' EQvv.
-
-  apply Stack_R_stack'_cons.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply meanings_of_compositionT with theta_n;
-  auto.
-  -- (* stack_R_stack' th1 nil phi1 nil *)
-  apply Stack_R_stack'_nil.
-  auto.
-  * (* phi0' :: vv' = vv -> ...*)
-  clear th1' EQth1' phi1' EQphi1'.
-  apply Stack_R_stack'_cons.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta');
-  auto.
-  -- (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
-  apply Stack_R_stack'_cons;
-  auto.
-
   - (* com' = push' phi4 -> ... *)
-  intros phi4 Hcom'.
-  rewrite Hcom' in EQv'.
-  rewrite Hcom' in HrA'.
-  clear com' Hcom'.
-  inversion HrA' as
-  [| | q1 phi_n' a' phi1' q2 phi3 tst asgn j' HrA HrAp
-   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] EQphi4].
-  clear q1 EQq1 q2 EQq2 a' EQa' phi_n' EQphi_n' phi1' EQphi1'.
-  destruct HrAp as [Hphi_1_n [Hphi_n_3 [Htst_phi3 P3eq]]].
-  assert (H := updater_must_exist
-    theta_n z tst asgn th1 u phi_n phi3
-    Hphi_n Htst_phi3 P3eq Hphi_n_3).
-  destruct H as [d [Htst Hfrs_m]].
   exists d.
-  exists (update theta_n asgn d).
-  exists (update_stack u (update theta_n asgn d) (push j')).
+  exists theta'.
+  exists (update_stack u theta' (push j')).
   rewrite EQu.
-  rewrite EQu in Hfrs_m.
-
-  (* EQth': theta' = update theta_n asgn d *)
-  remember (update theta_n asgn d) as theta' eqn:EQth'.
-
-  (* Hfresh': freshness_p_on_stack theta' u *)
-  assert (Hfresh': freshness_p_on_stack theta' u).
-  { rewrite EQth'. rewrite EQu.
-  rewrite EQu in Hproper.
-  rewrite EQu in Hfresh.
-  apply moveA_keeps_freshness_p_when_skip with tst;
-  auto. }
-
-  (* Hphi3: (theta_n, z, theta') |= phi3 *)
-  assert (Htst_th' := conj Htst EQth').
-  apply ex_intro with (x := d) in Htst_th'.
-  apply meanings_of_Phi_tst_asgn in Htst_th'.
-  destruct Htst_th' as [phi3' [P3'eq [Htst_phi3' Hphi3]]].
-  assert (EQphi3' : phi3 = phi3').
-  { apply at_most_one_Phi_tst_asgn with tst asgn phi_n; auto.
-  split; auto.
-  apply (double_models_means_composableT th1 theta_n theta' z).
-  split; auto.
-  }
-  rewrite<- EQphi3' in Hphi3.
-  clear phi3' EQphi3' P3'eq Htst_phi3'.
-
-  (* weak_freshness_p th1 z theta_n theta' *)
-  assert (Hwfrs: weak_freshness_p th1 z theta_n theta').
-  { unfold weak_freshness_p.
-  intros i j.
-  intros H.
-  rewrite EQth' in H.
-  unfold update in H.
-
-  destruct (tst_is_empty_or_not tst)
-  as [Htst_empty | Htst_not_empty].
-  ++ (* tst_empty -> ... *)
-  apply Hfrs_m in Htst_empty as Hfrs_m'.
-  rewrite Forall_forall in Hfrs_m'.
-  assert (Hzin : In (z, th1) ((z, th1) :: uu)).
-  { apply in_eq. }
-  assert (Hm := Hfrs_m' (z, th1) Hzin).
-  simpl in Hm.
-  generalize dependent H.
-  case (asgn j); intro H.
-  ** (* asgn j = true -> ... *)
-  apply Hm in H.
-  contradiction.
-  ** (* asgn j = false -> ... *)
-  left.
-  exists j.
-  exact H.
-  ++ (* tst_not_empty -> ... *)
-  clear Hfrs_m.
-  unfold models in Htst.
-  unfold Theta_D_D_models_Tst in Htst.
-  destruct Htst as [Htst' Htst_top].
-  destruct Htst_not_empty as [xi Htst_true].
-  unfold freshness_p.
-  case_eq xi.
-  ** (* xi = inl n -> ... *)
-  intros n EQxi.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst' in Htst_true.
-  clear xi EQxi.
-  left.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- exists n.
-  rewrite Htst_true.
-  exact H.
-  --- exists j.
-  exact H.
-  ** (* xi = inr top -> ... *)
-  intros t EQxi.
-  destruct t.
-  rewrite EQxi in Htst_true.
-  rewrite<- Htst_top in Htst_true.
-  clear xi EQxi.
-  generalize dependent H.
-  case (asgn j); intro H.
-  --- right.
-  rewrite Htst_true.
-  exact H.
-  --- left. exists j.
-  exact H.
-  }
-
   split.
   + (* moveA ... *)
   apply MoveA with tst asgn; auto.
