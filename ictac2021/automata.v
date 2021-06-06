@@ -15,7 +15,8 @@ Local Open Scope type_scope.  (* for '*' *)
 
 Parameter Sigma : Set.  (* finite alphabet *)
 
-Parameter Q : Set.  (* finite control states *)
+(* finite control states *)
+Parameter Q : Set.
 Definition Q' := Q * Phi.
 
 Inductive Com :=
@@ -67,24 +68,20 @@ Definition Config' := Q' * Stack'.
 
 Definition update_stack (u : Stack) theta com :=
   match com with
-  | pop =>
-    match u with
-     | cons _ u' => u'
-     | nil => nil
-     end
+  | pop => match u with
+             _ :: u' => u' | nil => nil
+           end
   | skip => u
-  | push j => cons (theta j, theta) u
+  | push j => (theta j, theta) :: u
   end.
 
 Definition update_stack' (u : Stack') com' :=
   match com' with
-  | pop' =>
-    match u with
-     | cons _ u' => u'
-     | nil => nil
-     end
+  | pop' => match u with
+              _ :: u' => u' | nil => nil
+            end
   | skip' => u
-  | push' z => cons z u
+  | push' z => z :: u
   end.
 
 Definition not_contain d (cell: D * Theta) :=
@@ -96,12 +93,6 @@ Definition freshness_p_on_moveA (tst : Tst) d (u : Stack) :=
   (forall xi, tst xi <> true) ->
   Forall (not_contain d) u.
 
-Axiom stack_has_outside_data :
-  forall (theta: Theta) (e: D) (u: Stack),
-  exists d : D,
-    d <> e /\ (forall i, theta i <> d) /\
-    Forall (not_contain d) u.
-
 Inductive moveA
   : Config -> Sigma -> D -> Config -> Prop :=
   | MoveA :
@@ -109,17 +100,23 @@ Inductive moveA
     ruleA q1 a tst q2 asgn com ->
     (theta, d, z) |= tst ->
     theta' = update theta asgn d ->
-    freshness_p_on_moveA tst d (cons (z, zth) u) ->
-    moveA (q1, theta,  (cons (z, zth) u)) a d
-          (q2, theta', update_stack (cons (z, zth) u) theta' com).
+    freshness_p_on_moveA tst d ((z, zth) :: u) ->
+    moveA (q1, theta,  ((z, zth) :: u)) a d
+          (q2, theta', update_stack ((z, zth) :: u) theta' com).
 
 Inductive moveA'
   : Config' -> Sigma -> Config' -> Prop :=
   | MoveA' :
     forall q1 q2 a z u com',
     ruleA' q1 a z q2 com' ->
-    moveA' (q1, (cons z u)) a
-           (q2, update_stack' (cons z u) com').
+    moveA' (q1, (z :: u)) a
+           (q2, update_stack' (z :: u) com').
+
+Axiom stack_has_outside_data :
+  forall (theta: Theta) (e: D) (u: Stack),
+  exists d : D,
+    d <> e /\ (forall i, theta i <> d) /\
+    Forall (not_contain d) u.
 
 Definition is_proper_stack (stack : Stack) :=
   let is_proper_cell cell :=
@@ -132,20 +129,20 @@ Inductive stack_R_stack'
   : Theta -> Stack -> Phi -> Stack' -> Prop :=
   | Stack_R_stack'_nil :
     forall theta phi,
-    (theta_bot, bot, theta) |= phi ->
-    stack_R_stack' theta nil phi nil
+      (theta_bot, bot, theta) |= phi ->
+      stack_R_stack' theta nil phi nil
   | Stack_R_stack'_cons :
     forall theta ptheta d phi pphi u v,
-    (ptheta, d, theta) |= phi ->
-    stack_R_stack' ptheta u pphi v ->
-    stack_R_stack' theta (cons (d, ptheta) u) phi (cons pphi v).
+      (ptheta, d, theta) |= phi ->
+      stack_R_stack' ptheta u pphi v ->
+      stack_R_stack' theta ((d, ptheta) :: u) phi (pphi :: v).
 
 Inductive config_R_config'
   : Config -> Config' -> Prop :=
   | Config_R_config' :
     forall q theta u phi v,
-    stack_R_stack' theta u phi v ->
-    config_R_config' (q, theta, u) ((q, phi), v).
+      stack_R_stack' theta u phi v ->
+      config_R_config' (q, theta, u) ((q, phi), v).
 
 (* freshness_p on stack *)
 
@@ -171,7 +168,7 @@ Definition freshness_p_on_triple
 Definition freshness_p_on_stack theta stack :=
   Forall3 freshness_p_on_triple ((bot, theta) :: stack).
 
-Example forall2_example_1 :
+Local Example forall2_example_1 :
   Forall2 le (0 :: 1 :: 3 :: 8 :: nil).
 Proof.
   repeat apply Forall2_cons;
@@ -184,7 +181,7 @@ Qed.
 
 (* Forall, Forall2, Forall3 *)
 
-Lemma Forall_sublist {A : Type} :
+Local Lemma Forall_sublist {A : Type} :
   forall p (a : A) u1 u2,
   Forall p (u1 ++ (a :: u2)) ->
   Forall p (u1 ++ u2).
@@ -204,7 +201,7 @@ Proof.
   apply Forall_cons; auto.
 Qed.
 
-Lemma Forall2_sublist {A : Type} :
+Local Lemma Forall2_sublist {A : Type} :
   forall p (a : A) u1 u2,
   Forall2 p (u1 ++ (a :: u2)) ->
   Forall2 p (u1 ++ u2).
@@ -228,7 +225,7 @@ Proof.
   apply IHu1; auto.
 Qed.
 
-Lemma Forall3_sublist {A : Type} :
+Local Lemma Forall3_sublist {A : Type} :
   forall p (a : A) u1 u2,
   Forall3 p (u1 ++ (a :: u2)) ->
   Forall3 p (u1 ++ u2).
@@ -252,7 +249,7 @@ Proof.
   apply IHu1; auto.
 Qed.
 
-Lemma Forall2_hd2 {A : Type} :
+Local Lemma Forall2_hd2 {A : Type} :
   forall p (a : A) b u,
   Forall2 p (a :: b :: u) ->
   p a b.
@@ -264,7 +261,7 @@ Proof.
   exact H.
 Qed.
 
-Lemma Forall3_hd3 {A : Type} :
+Local Lemma Forall3_hd3 {A : Type} :
   forall p (a : A) b c u,
   Forall3 p (a :: b :: c :: u) ->
   p a b c.
@@ -576,7 +573,7 @@ Qed.
 
 (* moveA *)
 
-Lemma keeping_freshness_p_when_skip :
+Local Lemma keeping_freshness_p_when_skip :
   forall theta zth d z u tst asgn,
   (theta, d, z) |= tst ->
   is_proper_stack ((z, zth) :: u) ->
@@ -803,22 +800,78 @@ Proof.
   apply (Forall3_sublist _ (bot, theta) nil); auto.
 Qed.
 
-Lemma moveA_inversion :
-  forall q q' theta theta' u u' a d,
+Lemma moveA_keeps_freshness_p :
+  forall q theta u a d q' theta' u',
   moveA (q, theta, u) a d (q', theta', u') ->
-  exists tst asgn com z zth uu,
-  ruleA q a tst q' asgn com /\
-  u = cons (z, zth) uu /\
-  (theta, d, z) |= tst /\
-  theta' = update theta asgn d /\
-  u' = update_stack u theta' com /\
-  freshness_p_on_moveA tst d u.
+  is_proper_stack u ->
+  freshness_p_on_stack theta u ->
+  freshness_p_on_stack theta' u'.
 Proof.
-  intros q q' theta theta' u u' a d.
-  intros Hm.
-  inversion Hm as [tst asgn com z zth uu].
-  exists tst, asgn, com, z, zth, uu.
-  split; [| split]; auto.
+  intros q theta u a d q' theta' u'.
+  intros HmA Hprop Hfresh.
+  inversion HmA as [tst asgn com z zth uu q1 q2 a' d' th1 th2
+    HrA Htst EQth' Hfrs_m [EQq1 EQth1 EQu] EQa' EQd' [EQq2 EQth2 EQu']].
+  clear q1 EQq1 th1 EQth1 a' EQa' d' EQd' q2 EQq2 th2 EQth2.
+
+  assert (Hskip: freshness_p_on_stack theta' u).
+  { rewrite EQth'. rewrite<- EQu.
+  apply moveA_keeps_freshness_p_when_skip with tst;
+  try rewrite EQu; auto; rewrite<- EQu; auto.
+  }
+
+  case_eq com;
+  [intros Hcom | intros Hcom | intros j Hcom];
+  rewrite Hcom in EQu';
+  rewrite Hcom in HrA;
+  clear com Hcom;
+  unfold update_stack in EQu'.
+  - (* com = pop -> ... *)
+  apply (substack_keeps_freshness_p _ (z, zth) nil).
+  unfold app.
+  rewrite EQu.
+  exact Hskip.
+  - (* com = skip -> ... *)
+  rewrite EQu.
+  exact Hskip.
+  - (* com = push -> ... *)
+  apply push_keeps_freshness_p.
+  rewrite EQu.
+  exact Hskip.
+Qed.
+
+Lemma moveA_keeps_proper_stack :
+  forall q theta u a d q' theta' u',
+  moveA (q, theta, u) a d (q', theta', u') ->
+  is_proper_stack u ->
+  is_proper_stack u'.
+Proof.
+  intros q theta u a d q' theta' u'.
+  intros HmA Hproper.
+  inversion HmA as [tst asgn com z zth uu q1 q2 a' d' th1 th2
+    HrA Htst EQth' Hfrs_m [EQq1 EQth1 EQu] EQa' EQd' [EQq2 EQth2 EQu']].
+  clear q1 EQq1 th1 EQth1 a' EQa' d' EQd' q2 EQq2 th2 EQth2.
+  case_eq com;
+  [intros Hcom | intros Hcom | intros j Hcom];
+  rewrite Hcom in EQu';
+  rewrite Hcom in HrA;
+  clear com Hcom;
+  unfold update_stack in EQu'.
+  - (* com = pop -> ... *)
+  unfold is_proper_stack.
+  unfold is_proper_stack in Hproper.
+  rewrite<- EQu in Hproper.
+  inversion Hproper as [| x l Hz Hproper_u' [EQx EQl]].
+  apply Hproper_u'.
+  - (* com = skip -> ... *)
+  rewrite EQu.
+  exact Hproper.
+  - (* com = push -> ... *)
+  unfold is_proper_stack.
+  apply Forall_cons.
+  { exists j; reflexivity. }
+  unfold is_proper_stack in Hproper.
+  rewrite<- EQu in Hproper.
+  exact Hproper.
 Qed.
 
 Lemma no_moveA_on_nil :
@@ -830,95 +883,9 @@ Proof.
   inversion H.
 Qed.
 
-Lemma moveA_keeps_proper_stack :
-  forall q theta u a d q' theta' u',
-  moveA (q, theta, u) a d (q', theta', u') ->
-  is_proper_stack u ->
-  is_proper_stack u'.
-Proof.
-  intros q theta u a d q' theta' u'.
-  intros HmA Hproper.
-  apply moveA_inversion in HmA as HrA.
-  destruct HrA
-  as [tst [asgn [com [z [zth [uu [HrA [EQu [Htst [EQth' [EQu' Hfrs_m]]]]]]]]]]].
-  case_eq com;
-  [intros Hcom | intros Hcom | intros j Hcom];
-  rewrite Hcom in EQu';
-  rewrite Hcom in HrA;
-  clear com Hcom;
-  rewrite EQu in EQu';
-  unfold update_stack in EQu'.
-  - (* com = pop -> ... *)
-  rewrite<- EQu' in EQu.
-  clear uu EQu'.
-  unfold is_proper_stack.
-  unfold is_proper_stack in Hproper.
-  rewrite EQu in Hproper.
-  inversion Hproper as [| x l Hz Hproper_u' [EQx EQl]].
-  apply Hproper_u'.
-  - (* com = skip -> ... *)
-  rewrite<- EQu' in EQu.
-  clear uu EQu'.
-  rewrite<- EQu.
-  exact Hproper.
-  - (* com = push -> ... *)
-  rewrite<- EQu in EQu'.
-  clear uu EQu.
-  rewrite EQu'.
-  unfold is_proper_stack.
-  apply Forall_cons.
-  { exists j; reflexivity. }
-  unfold is_proper_stack in Hproper.
-  exact Hproper.
-Qed.
-
-Lemma moveA_keeps_freshness_p :
-  forall q theta u a d q' theta' u',
-  moveA (q, theta, u) a d (q', theta', u') ->
-  is_proper_stack u ->
-  freshness_p_on_stack theta u ->
-  freshness_p_on_stack theta' u'.
-Proof.
-  intros q theta u a d q' theta' u'.
-  intros HmA Hprop Hfresh.
-  apply moveA_inversion in HmA as HrA.
-  destruct HrA
-  as [tst [asgn [com [z [zth [uu [HrA [EQu [Htst [EQth' [EQu' Hfrs_m]]]]]]]]]]].
-
-  assert (Hskip: freshness_p_on_stack theta' u).
-  { rewrite EQth'. rewrite EQu.
-  apply moveA_keeps_freshness_p_when_skip with tst;
-  try rewrite<- EQu; auto.
-  }
-
-  case_eq com;
-  [intros Hcom | intros Hcom | intros j Hcom];
-  rewrite Hcom in EQu';
-  rewrite Hcom in HrA;
-  clear com Hcom;
-  rewrite EQu in EQu';
-  unfold update_stack in EQu'.
-  - (* com = pop -> ... *)
-  rewrite<- EQu' in EQu.
-  apply (substack_keeps_freshness_p _ (z, zth) nil).
-  unfold app.
-  rewrite<- EQu.
-  exact Hskip.
-  - (* com = skip -> ... *)
-  rewrite<- EQu' in EQu.
-  rewrite<- EQu.
-  exact Hskip.
-  - (* com = push -> ... *)
-  rewrite<- EQu in EQu'.
-  clear uu EQu.
-  rewrite EQu'.
-  apply push_keeps_freshness_p.
-  exact Hskip.
-Qed.
-
 (* config_R_config' *)
 
-Lemma config_R_nil_nil_1 :
+Local Lemma config_R_nil_nil_1 :
   forall q theta u phi,
   config_R_config' (q, theta, u) (q, phi, nil) ->
   u = nil.
@@ -930,7 +897,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma config_R_nil_nil_2 :
+Local Lemma config_R_nil_nil_2 :
   forall q theta v phi,
   config_R_config' (q, theta, nil) (q, phi, v) ->
   v = nil.
@@ -951,7 +918,6 @@ Lemma bisimilar_1 :
     config_R_config' (q, theta_n, u) ((q, phi_n), v) ->
     freshness_p_on_stack theta_n u ->
     is_proper_stack u ->
-    (* u = nil \/ the last element of u is (bot, theta_bot) *)
     last u (bot, theta_bot) = (bot, theta_bot) ->
     is_equiv_rel phi_n -> Forall is_equiv_rel v ->
   exists phi'' v',
@@ -962,14 +928,13 @@ Proof.
   intros a d q' theta' u'.
   intros HmA HR.
   intros Hfresh Hproper Hu_last Heq_phi_n Heq_v.
-  apply moveA_inversion in HmA as HrA.
-  destruct HrA as
-  [tst [asgn [com [z [zth [uu [HrA [EQu [Htst [EQth' [EQu' Hfrs_m]]]]]]]]]]].
+  inversion HmA as [tst asgn com z zth uu q1 q2 a' d' th1 th2
+    HrA Htst EQth' Hfrs_m [EQq1 EQth1 EQu] EQa' EQd' [EQq2 EQth2 EQu']].
+  clear q1 EQq1 th1 EQth1 a' EQa' d' EQd' q2 EQq2 th2 EQth2.
   assert (Hfresh': freshness_p_on_stack theta' u).
-  { rewrite EQth'. rewrite EQu.
-  rewrite EQu in Hproper.
-  rewrite EQu in Hfrs_m.
-  rewrite EQu in Hfresh.
+  { rewrite EQth'. rewrite<- EQu.
+  rewrite<- EQu in Hproper.
+  rewrite<- EQu in Hfresh.
   apply moveA_keeps_freshness_p_when_skip with tst;
   auto. }
 
@@ -991,17 +956,18 @@ Proof.
   as [th2 phi' Hphi_n EQth2 Hu_nil |
       th2 th1 d1 phi' phi1' u1 v1 Hphi_n HsR1 EQth2 EQu1 EQphi' EQv1].
   { (* nil = u -> ... *)
-  rewrite EQu in Hu_nil;
+  rewrite<- EQu in Hu_nil;
   discriminate Hu_nil.
   }
   (* ((d1, th1) :: u1) = u -> ... *)
   clear th2 EQth2 phi' EQphi'.
-  rewrite EQu in EQu1.
+  rewrite<- EQu in EQu1.
   injection EQu1; clear EQu1.
   intros EQu1 EQth1 EQd1.
   rewrite EQu1 in HsR1; clear u1 EQu1.
   rewrite EQd1 in Hphi_n; clear d1 EQd1.
-  rewrite<- EQth1 in EQu; clear zth EQth1.
+(*  rewrite<- EQth1 in EQu; clear zth EQth1.
+*)
   rewrite EQv in EQv1.
   injection EQv1; clear EQv1.
   intros EQv1 EQphi1'.
@@ -1014,10 +980,10 @@ Proof.
   as [th2 phi1' Hphi1 EQth2 EQuu EQphi1' EQvv |
      th2 th1' d1 phi' phi1' uu1 vv1 Hphi' HsR2 EQth2 EQuu1 EQphi' EQvv1].
   -- (* nil = vv -> ... *)
-  apply (double_models_means_composable theta_bot th1 theta_n bot z).
+  apply (double_models_means_composable theta_bot th1 theta_n bot z);
   auto.
   -- (* (phi1' :: vv1) = vv -> ... *)
-  apply (double_models_means_composable th1' th1 theta_n d1 z).
+  apply (double_models_means_composable th1' th1 theta_n d1 z);
   auto.
   }
 
@@ -1025,7 +991,7 @@ Proof.
   assert (Hwfrs: weak_freshness_p th1 z theta_n theta').
   { rewrite EQth'.
   apply (update_has_weak_freshness_p th1 theta_n z d tst asgn uu);
-  try rewrite<- EQu; auto. }
+  try rewrite EQth1; auto. }
 
   (* phi3 *)
   assert (HtstEQth' := conj Htst EQth').
@@ -1056,11 +1022,9 @@ Proof.
   split; auto.
 
   + (* config_R_config' ... *)
-  rewrite EQu in EQu'.
   unfold update_stack in EQu'.
-  rewrite EQu'.
-  rewrite EQu' in HmA.
-  clear u' EQu'.
+  unfold update_stack.
+  rewrite<- EQu' in HmA.
 
   unfold update_stack'.
   apply Config_R_config'.
@@ -1074,21 +1038,23 @@ Proof.
   rewrite<- EQuu in EQu.
   rewrite<- EQuu in HsR1.
   rewrite<- EQuu in HmA.
-  clear uu EQuu.
 
-  rewrite EQu in Hu_last.
+  rewrite<- EQu in Hu_last.
   unfold last in Hu_last.
   injection Hu_last.
-  intros EQth1 EQz.
+  intros EQth1' EQz.
   rewrite EQth1 in Hphi1.
+  rewrite EQth1' in Hphi1.
   rewrite EQth1 in Hphi_n.
+  rewrite EQth1' in Hphi_n.
   rewrite EQz in Hphi_n.
   rewrite EQz in Hphi3.
 
   unfold freshness_p_on_moveA in Hfrs_m.
 
   apply Stack_R_stack'_nil.
-  apply (meanings_of_composition theta_bot theta_bot theta' bot bot).
+  apply (meanings_of_composition theta_bot theta_bot theta' bot bot);
+  auto.
   -- (* is_equiv_rel phi1 *)
   rewrite Forall_forall in Heq_v.
   apply Heq_v.
@@ -1104,8 +1070,7 @@ Proof.
   exists j.
   unfold theta_bot.
   reflexivity.
-  -- (* (...) |= phi1 /\ (theta_bot,bot,theta') |= compositionT phi_n phi3 *)
-  split; auto.
+  -- (* (theta_bot,bot,theta') |= compositionT phi_n phi3 *)
   apply (meanings_of_compositionT theta_bot theta_n theta' bot);
   auto.
   ++ (* weak_freshness_p theta_bot bot theta_n theta' *)
@@ -1123,21 +1088,22 @@ Proof.
 
   apply Stack_R_stack'_cons;
   auto.
-  apply (meanings_of_composition th0 th1 theta' d0 z).
+  apply (meanings_of_composition th0 th1 theta' d0 z);
+  auto.
   -- (* is_equiv_rel phi1 *)
   rewrite Forall_forall in Heq_v.
   apply Heq_v.
   rewrite EQv.
   apply in_eq.
   -- (* freshness_p th0 d0 th1 theta' *)
-  rewrite EQu in Hfresh'.
+  rewrite<- EQu in Hfresh'.
   rewrite<- EQuu in Hfresh'.
   unfold freshness_p_on_stack in Hfresh'.
   apply Forall3_hd3 in Hfresh'.
   unfold freshness_p_on_triple in Hfresh'.
+  rewrite EQth1.
   exact Hfresh'.
-  -- (* (...) |= phi1 /\ (th1, z, theta') |= compositionT ... *)
-  split; auto.
+  -- (* (th1, z, theta') |= compositionT ... *)
   apply meanings_of_compositionT with theta_n;
   auto.
 
@@ -1160,9 +1126,10 @@ Proof.
   + (* config_R_config' ... *)
   rewrite EQu in EQu'.
   unfold update_stack in EQu'.
-  rewrite EQu'.
-  rewrite EQu' in HmA.
+  unfold update_stack.
+  rewrite<- EQu' in HmA.
   clear u' EQu'.
+  rewrite<- EQth1.
 
   unfold update_stack'.
   apply Config_R_config'.
@@ -1210,9 +1177,10 @@ Proof.
   + (* config_R_config' ... *)
   rewrite EQu in EQu'.
   unfold update_stack in EQu'.
-  rewrite EQu'.
-  rewrite EQu' in HmA.
+  unfold update_stack.
+  rewrite<- EQu' in HmA.
   clear u' EQu'.
+  rewrite<- EQth1.
 
   unfold update_stack'.
   apply Config_R_config'.
@@ -1259,7 +1227,6 @@ Lemma bisimilar_2 :
     config_R_config' (q, theta_n, u) ((q, phi_n), v) ->
     freshness_p_on_stack theta_n u ->
     is_proper_stack u ->
-    (* u = nil \/ the last element of u is (bot, theta_bot) *)
     last u (bot, theta_bot) = (bot, theta_bot) ->
     is_equiv_rel phi_n -> Forall is_equiv_rel v ->
   exists d theta' u',
@@ -1344,9 +1311,8 @@ Proof.
   apply ex_intro with (x := d) in Htst_th';
   apply meanings_of_Phi_tst_asgn in Htst_th';
   destruct Htst_th' as [phi3' [P3'eq [Htst_phi3' Hphi3]]];
-  assert (Hphi_n_3' := conj Hphi_n Hphi3);
-  apply (double_models_means_composableT th1 theta_n theta' z phi_n phi3')
-  in Hphi_n_3';
+  apply (double_models_means_composableT th1 theta_n theta' z phi_n phi3'
+    Hphi_n) in Hphi3 as Hphi_n_3';
   assert (EQphi3' := conj Hphi_n_3' Htst_phi3');
   apply (at_most_one_Phi_tst_asgn tst asgn phi_n phi3 phi3'
   (conj P3eq P3'eq) (conj Hphi_n_3 Htst_phi3)) in EQphi3';
@@ -1440,7 +1406,8 @@ Proof.
   unfold freshness_p_on_moveA in Hfrs_m.
 
   apply Stack_R_stack'_nil.
-  apply (meanings_of_composition theta_bot theta_bot theta' bot bot).
+  apply (meanings_of_composition theta_bot theta_bot theta' bot bot);
+  auto.
   -- (* is_equiv_rel phi1 *)
   rewrite Forall_forall in Heq_v.
   apply Heq_v.
@@ -1456,8 +1423,7 @@ Proof.
   exists j.
   unfold theta_bot.
   reflexivity.
-  -- (* (...) |= phi1 /\ (theta_bot,bot,theta') |= compositionT phi_n phi3 *)
-  split; auto.
+  -- (* (theta_bot,bot,theta') |= compositionT phi_n phi3 *)
   apply (meanings_of_compositionT theta_bot theta_n theta' bot);
   auto.
   ++ (* weak_freshness_p theta_bot bot theta_n theta' *)
@@ -1475,7 +1441,8 @@ Proof.
 
   apply Stack_R_stack'_cons;
   auto.
-  apply (meanings_of_composition th0 th1 theta' d0 z).
+  apply (meanings_of_composition th0 th1 theta' d0 z);
+  auto.
   -- (* is_equiv_rel phi1 *)
   rewrite Forall_forall in Heq_v.
   apply Heq_v.
@@ -1486,8 +1453,7 @@ Proof.
   apply Forall3_hd3 in Hfresh'.
   unfold freshness_p_on_triple in Hfresh'.
   exact Hfresh'.
-  -- (* (...) |= phi1 /\ (th1, z, theta') |= compositionT ... *)
-  split; auto.
+  -- (* (th1, z, theta') |= compositionT ... *)
   apply meanings_of_compositionT with theta_n;
   auto.
 

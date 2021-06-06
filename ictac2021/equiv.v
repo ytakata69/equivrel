@@ -83,10 +83,6 @@ Axiom Theta_extensionality :
 Axiom outside_data_exists :
   forall (theta : Theta) e, exists d, d <> e /\ forall i, theta i <> d.
 
-Axiom outside_data_exists' :
-  forall theta theta': Theta, exists d : D,
-    (forall i, theta i <> d) /\ (forall i, theta' i<> d).
-
 (* Construct a phi from theta, d, theta' *)
 Definition phi_matches (theta : Theta) (d : D) (theta' : Theta) : Phi :=
   fun x y : register =>
@@ -171,7 +167,7 @@ Instance two_Theta_D_models_Phi : Models (Theta * D * Theta) Phi :=
 
 (* Utilities *)
 
-Lemma not_true_is_false :
+Local Lemma not_true_is_false :
   forall b : bool, b <> true <-> b = false.
 Proof.
   intros b.
@@ -184,7 +180,7 @@ Proof.
   discriminate.
 Qed.
 
-Lemma false_eq_false :
+Local Lemma false_eq_false :
   forall b1 b2 : bool,
   (b1 = true <-> b2 = true) -> b1 = false -> b2 = false.
 Proof.
@@ -320,7 +316,7 @@ Proof.
     auto.
 Qed.
 
-Lemma meanings_of_Phi_tst_asgn_1 :
+Local Lemma meanings_of_Phi_tst_asgn_1 :
   forall theta theta' e tst asgn,
   (exists phi,
      is_equiv_rel phi /\
@@ -533,7 +529,7 @@ Proof.
     discriminate.
 Qed.
 
-Lemma meanings_of_Phi_tst_asgn_2 :
+Local Lemma meanings_of_Phi_tst_asgn_2 :
   forall theta theta' e tst asgn,
   (exists d,
     (theta, d, e) |= tst /\ theta' = update theta asgn d)
@@ -583,7 +579,7 @@ Proof.
   auto.
 Qed.
 
-Lemma meanings_of_Phi_eq_j_1 :
+Local Lemma meanings_of_Phi_eq_j_1 :
   forall theta theta' e j,
   (exists phi,
      is_equiv_rel phi /\
@@ -614,7 +610,7 @@ Proof.
   apply HphiT.
 Qed.
 
-Lemma meanings_of_Phi_eq_j_2 :
+Local Lemma meanings_of_Phi_eq_j_2 :
   forall theta theta' e j,
   (theta = theta' /\ theta j = e)
   ->
@@ -1798,14 +1794,14 @@ Qed.
 
 Lemma double_models_means_composable :
   forall theta1 theta2 theta3 d1 d2 phi1 phi2,
-  (theta1, d1, theta2) |= phi1 /\
+  (theta1, d1, theta2) |= phi1 ->
   (theta2, d2, theta3) |= phi2 ->
   composable phi1 phi2.
 Proof.
   intros theta1 theta2 theta3 d1 d2 phi1 phi2.
   unfold models.
   unfold two_Theta_D_models_Phi.
-  intros [H1 H2].
+  intros H1 H2.
   destruct H1 as [_ [H12 _]].
   destruct H2 as [H21 _].
   unfold composable.
@@ -1817,14 +1813,14 @@ Qed.
 
 Lemma double_models_means_composableT :
   forall theta1 theta2 theta3 d phi1 phi2,
-  (theta1, d, theta2) |= phi1 /\
+  (theta1, d, theta2) |= phi1 ->
   (theta2, d, theta3) |= phi2 ->
   composableT phi1 phi2.
 Proof.
   intros theta1 theta2 theta3 d phi1 phi2.
   unfold models.
   unfold two_Theta_D_models_Phi.
-  intros [H1 H2].
+  intros H1 H2.
   destruct H1 as [_ [H12 [_ [_ H15]]]].
   destruct H2 as [H21 [_ [_ [H24 _]]]].
   unfold composableT.
@@ -1845,19 +1841,20 @@ Lemma meanings_of_composition :
   forall theta1 theta2 theta3 d1 d2 phi1 phi2,
   is_equiv_rel phi1 ->
   freshness_p theta1 d1 theta2 theta3 ->
-  (theta1, d1, theta2) |= phi1 /\
+  (theta1, d1, theta2) |= phi1 ->
   (theta2, d2, theta3) |= phi2 ->
   (theta1, d1, theta3) |= composition phi1 phi2.
 Proof.
   intros theta1 theta2 theta3 d1 d2 phi1 phi2.
   intros P1eq.
   destruct P1eq as [_ [P1sym _]].
-  intros F H.
+  intros F H1 H2.
   unfold freshness_p in F.
   destruct F as [F1 F2].
-  unfold models in H.
-  unfold two_Theta_D_models_Phi in H.
-  destruct H as [H1 H2].
+  unfold models in H1.
+  unfold models in H2.
+  unfold two_Theta_D_models_Phi in H1.
+  unfold two_Theta_D_models_Phi in H2.
   destruct H1 as [H11 [H12 [H13 [H14 H15]]]].
   destruct H2 as [H21 [H22 [H23 [H24 H25]]]].
   unfold models.
@@ -1915,7 +1912,7 @@ Lemma meanings_of_compositionT :
   is_equiv_rel phi1 ->
   is_equiv_rel phi2 ->
   weak_freshness_p theta1 d1 theta2 theta3 ->
-  (theta1, d1, theta2) |= phi1 /\
+  (theta1, d1, theta2) |= phi1 ->
   (theta2, d1, theta3) |= phi2 ->
   (theta1, d1, theta3) |= compositionT phi1 phi2.
 Proof.
@@ -1928,7 +1925,7 @@ Proof.
   unfold models.
   unfold two_Theta_D_models_Phi.
   unfold compositionT.
-  intros [H1 H2].
+  intros H1 H2.
   destruct H1 as [H11 [H12 [H13 [H14 H15]]]].
   destruct H2 as [H21 [H22 [H23 [H24 H25]]]].
   split; auto; split; auto; [split; [| split]].
