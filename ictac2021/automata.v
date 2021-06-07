@@ -911,22 +911,21 @@ Qed.
 (* Theorem on bisimilarity *)
 
 Lemma bisimilar_1 :
-  forall q theta_n phi_n u v,
-  forall a d q' theta' u',
-    moveA (q, theta_n, u) a d (q', theta', u') ->
-    config_R_config' (q, theta_n, u) ((q, phi_n), v) ->
-    freshness_p_on_stack theta_n u ->
+  forall q theta phi u v a d q' theta' u',
+    moveA (q, theta, u) a d (q', theta', u') ->
+    config_R_config' (q, theta, u) ((q, phi), v) ->
+    freshness_p_on_stack theta u ->
     is_proper_stack u ->
     last u (bot, theta_bot) = (bot, theta_bot) ->
-    is_equiv_rel phi_n -> Forall is_equiv_rel v ->
-  exists phi'' v',
-    moveA' ((q, phi_n), v) a ((q', phi''), v') /\
-    config_R_config' (q', theta', u') ((q', phi''), v').
+    is_equiv_rel phi -> Forall is_equiv_rel v ->
+  exists phi' v',
+    moveA' ((q, phi), v) a ((q', phi'), v') /\
+    config_R_config' (q', theta', u') ((q', phi'), v').
 Proof.
-  intros q theta_n phi_n u v.
+  intros q theta phi u v.
   intros a d q' theta' u'.
   intros HmA HR.
-  intros Hfresh Hproper Hu_last Heq_phi_n Heq_v.
+  intros Hfresh Hproper Hu_last Heq_phi Heq_v.
   inversion HmA as [tst asgn com z zth uu q1 q2 a' d' th1 th2
     HrA Htst EQth' Hfrs_m [EQq1 EQth1 EQu] EQa' EQd' [EQq2 EQth2 EQu']].
   clear q1 EQq1 th1 EQth1 a' EQa' d' EQd' q2 EQq2 th2 EQth2.
@@ -952,8 +951,8 @@ Proof.
   clear q1 EQq1 theta1 EQth1 u1 EQu1;
   clear phi' EQphi' v1 EQv1.
   inversion HsR
-  as [th2 phi' Hphi_n EQth2 Hu_nil |
-      th2 th1 d1 phi' phi1' u1 v1 Hphi_n HsR1 EQth2 EQu1 EQphi' EQv1].
+  as [th2 phi' Hphi EQth2 Hu_nil |
+      th2 th1 d1 phi' phi1' u1 v1 Hphi HsR1 EQth2 EQu1 EQphi' EQv1].
   { (* nil = u -> ... *)
   rewrite<- EQu in Hu_nil;
   discriminate Hu_nil.
@@ -964,30 +963,30 @@ Proof.
   injection EQu1; clear EQu1.
   intros EQu1 EQth1 EQd1.
   rewrite EQu1 in HsR1; clear u1 EQu1.
-  rewrite EQd1 in Hphi_n; clear d1 EQd1.
+  rewrite EQd1 in Hphi; clear d1 EQd1.
   rewrite EQv in EQv1.
   injection EQv1; clear EQv1.
   intros EQv1 EQphi1'.
   rewrite EQv1 in HsR1; clear v1 EQv1.
   rewrite EQphi1' in HsR1; clear phi1' EQphi1'.
 
-  (* composable phi1 phi_n *)
-  assert (Hphi_1_n: composable phi1 phi_n).
+  (* composable phi1 phi *)
+  assert (Hphi_1: composable phi1 phi).
   { inversion HsR1
   as [th2 phi1' Hphi1 EQth2 EQuu EQphi1' EQvv |
      th2 th1' d1 phi' phi1' uu1 vv1 Hphi' HsR2 EQth2 EQuu1 EQphi' EQvv1].
   -- (* nil = vv -> ... *)
-  apply (double_models_means_composable theta_bot th1 theta_n bot z);
+  apply (double_models_means_composable theta_bot th1 theta bot z);
   auto.
   -- (* (phi1' :: vv1) = vv -> ... *)
-  apply (double_models_means_composable th1' th1 theta_n d1 z);
+  apply (double_models_means_composable th1' th1 theta d1 z);
   auto.
   }
 
-  (* weak_freshness_p th1 z theta_n theta' *)
-  assert (Hwfrs: weak_freshness_p th1 z theta_n theta').
+  (* weak_freshness_p th1 z theta theta' *)
+  assert (Hwfrs: weak_freshness_p th1 z theta theta').
   { rewrite EQth'.
-  apply (update_has_weak_freshness_p th1 theta_n z d tst asgn uu);
+  apply (update_has_weak_freshness_p th1 theta z d tst asgn uu);
   try rewrite EQth1; auto. }
 
   (* phi3 *)
@@ -996,9 +995,9 @@ Proof.
   apply meanings_of_Phi_tst_asgn in HtstEQth'.
   destruct HtstEQth' as [phi3 [Heq_phi3 [Htst_phi3 Hphi3]]].
 
-  (* composableT phi_n phi3 *)
-  assert (Hphi_n_3: composableT phi_n phi3).
-  { apply (double_models_means_composableT th1 theta_n theta' z);
+  (* composableT phi phi3 *)
+  assert (Hphi_3: composableT phi phi3).
+  { apply (double_models_means_composableT th1 theta theta' z);
   auto. }
 
   case_eq com.
@@ -1007,7 +1006,7 @@ Proof.
   rewrite Hcom in EQu'.
   rewrite Hcom in HrA.
   clear com Hcom.
-  exists (composition phi1 (compositionT phi_n phi3)).
+  exists (composition phi1 (compositionT phi phi3)).
   exists (update_stack' v pop').
   rewrite EQv.
   split.
@@ -1063,8 +1062,8 @@ Proof.
   exists j.
   unfold theta_bot.
   reflexivity.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta' z);
+  -- (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply (meanings_of_compositionT th1 theta theta' z);
   auto.
 
   * (* vv = phi0 :: vv -> ... *)
@@ -1091,7 +1090,7 @@ Proof.
   rewrite EQth1.
   exact Hfresh'.
   -- (* (th1, z, theta') |= compositionT ... *)
-  apply meanings_of_compositionT with theta_n;
+  apply meanings_of_compositionT with theta;
   auto.
 
   - (* com = skip -> ... *)
@@ -1099,7 +1098,7 @@ Proof.
   rewrite Hcom in EQu'.
   rewrite Hcom in HrA.
   clear com Hcom.
-  exists (compositionT phi_n phi3).
+  exists (compositionT phi phi3).
   exists (update_stack' v skip').
   rewrite EQv.
   split.
@@ -1129,8 +1128,8 @@ Proof.
   clear th1' EQth1' phi1' EQphi1' EQvv.
 
   apply Stack_R_stack'_cons.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply meanings_of_compositionT with theta_n;
+  -- (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply meanings_of_compositionT with theta;
   auto.
   -- (* stack_R_stack' th1 nil phi1 nil *)
   apply Stack_R_stack'_nil.
@@ -1138,8 +1137,8 @@ Proof.
   * (* phi0' :: vv' = vv -> ...*)
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta');
+  -- (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply (meanings_of_compositionT th1 theta theta');
   auto.
   -- (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
   apply Stack_R_stack'_cons;
@@ -1151,7 +1150,7 @@ Proof.
   rewrite Hcom in HrA.
   clear com Hcom.
   exists (phi_to_Phi_eq_j j phi3).
-  exists (update_stack' v (push' (compositionT phi_n phi3))).
+  exists (update_stack' v (push' (compositionT phi phi3))).
   rewrite EQv.
   split.
   + (* moveA' ... *)
@@ -1181,12 +1180,12 @@ Proof.
 
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j, theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta_n;
+  apply theta_models_phi_to_Phi_eq_j with z theta;
   auto.
   -- (* stack_R_stack' theta' ((z, th1) :: nil) ... *)
   apply Stack_R_stack'_cons.
-  ++ (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply meanings_of_compositionT with theta_n;
+  ++ (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply meanings_of_compositionT with theta;
   auto.
   ++ (* stack_R_stack' th1 nil phi1 nil *)
   apply Stack_R_stack'_nil.
@@ -1195,12 +1194,12 @@ Proof.
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j, theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta_n;
+  apply theta_models_phi_to_Phi_eq_j with z theta;
   auto.
   -- (* stack_R_stack' theta' ((z, th1) :: ...) ... *)
   apply Stack_R_stack'_cons.
-  ++ (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta');
+  ++ (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply (meanings_of_compositionT th1 theta theta');
   auto.
   ++ (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
   apply Stack_R_stack'_cons;
@@ -1208,22 +1207,21 @@ Proof.
 Qed.
 
 Lemma bisimilar_2 :
-  forall q theta_n phi_n u v,
-  forall a q' phi'' v',
-    moveA' ((q, phi_n), v) a ((q', phi''), v') ->
-    config_R_config' (q, theta_n, u) ((q, phi_n), v) ->
-    freshness_p_on_stack theta_n u ->
+  forall q theta phi u v a q' phi' v',
+    moveA' ((q, phi), v) a ((q', phi'), v') ->
+    config_R_config' (q, theta, u) ((q, phi), v) ->
+    freshness_p_on_stack theta u ->
     is_proper_stack u ->
     last u (bot, theta_bot) = (bot, theta_bot) ->
-    is_equiv_rel phi_n -> Forall is_equiv_rel v ->
+    is_equiv_rel phi -> Forall is_equiv_rel v ->
   exists d theta' u',
-    moveA (q, theta_n, u) a d (q', theta', u') /\
-    config_R_config' (q', theta', u') ((q', phi''), v').
+    moveA (q, theta, u) a d (q', theta', u') /\
+    config_R_config' (q', theta', u') ((q', phi'), v').
 Proof.
-  intros q theta_n phi_n u v.
-  intros a q' phi'' v'.
+  intros q theta phi u v.
+  intros a q' phi' v'.
   intros HmA' HR.
-  intros Hfresh Hproper Hu_last Heq_phi_n Heq_v.
+  intros Hfresh Hproper Hu_last Heq_phi Heq_v.
 
   inversion HmA' as [q1 q2 a' phi1 vv com' HrA' [EQq1 EQv] EQa' [EQq2 EQv']].
   clear q1 EQq1 q2 EQq2 a' EQa'.
@@ -1239,25 +1237,25 @@ Proof.
   (* u = (z, th1) :: uu -> ... *)
   intros [z th1] uu EQu.
 
-  inversion HR as [q1 theta1 u1 phi' v1 HsR [EQq1 EQth1 EQu1] [EQphi' EQv1]].
+  inversion HR as [q1 theta1 u1 phi'' v1 HsR [EQq1 EQth1 EQu1] [EQphi'' EQv1]].
   clear q1 EQq1 theta1 EQth1 u1 EQu1;
-  clear phi' EQphi' v1 EQv1.
+  clear phi'' EQphi'' v1 EQv1.
   inversion HsR
-  as [th2 phi' Hphi_n EQth2 Hu_nil |
-      th2 th1' d1 phi' phi1' u1 v1 Hphi_n HsR1 EQth2 EQu1 EQphi' EQv1].
+  as [th2 phi'' Hphi EQth2 Hu_nil |
+      th2 th1' d1 phi'' phi1' u1 v1 Hphi HsR1 EQth2 EQu1 EQphi'' EQv1].
   { (* nil = u -> ... *)
   rewrite EQu in Hu_nil;
   discriminate Hu_nil.
   }
   (* ((d1, th1) :: u1) = u -> ... *)
-  clear th2 EQth2 phi' EQphi'.
+  clear th2 EQth2 phi'' EQphi''.
   rewrite EQu in EQu1.
   injection EQu1; clear EQu1.
   intros EQu1 EQth1 EQd1.
   rewrite EQu1 in HsR1; clear u1 EQu1.
-  rewrite EQd1 in Hphi_n; clear d1 EQd1.
+  rewrite EQd1 in Hphi; clear d1 EQd1.
   rewrite EQth1 in HsR1.
-  rewrite EQth1 in Hphi_n; clear th1' EQth1.
+  rewrite EQth1 in Hphi; clear th1' EQth1.
   rewrite<- EQv in EQv1.
   injection EQv1; clear EQv1.
   intros EQv1 EQphi1'.
@@ -1265,49 +1263,49 @@ Proof.
   rewrite EQphi1' in HsR1; clear phi1' EQphi1'.
 
   inversion HrA' as
-  [q1 phi_n' a' phi1' q2 phi3 tst asgn HrA HrAp
-   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] Hcom'
-  |q1 phi_n' a' phi1' q2 phi3 tst asgn HrA HrAp
-   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] Hcom'
-  |q1 phi_n' a' phi1' q2 phi3 tst asgn j' HrA HrAp
-   [EQq1 EQphi_n'] EQa' EQphi1' [EQq2 EQphi''] Hcom'];
-  clear q1 EQq1 q2 EQq2 a' EQa' phi_n' EQphi_n' phi1' EQphi1';
+  [q1 phi'' a' phi1' q2 phi3 tst asgn HrA HrAp
+   [EQq1 EQphi''] EQa' EQphi1' [EQq2 EQphi'] Hcom'
+  |q1 phi'' a' phi1' q2 phi3 tst asgn HrA HrAp
+   [EQq1 EQphi''] EQa' EQphi1' [EQq2 EQphi'] Hcom'
+  |q1 phi'' a' phi1' q2 phi3 tst asgn j' HrA HrAp
+   [EQq1 EQphi''] EQa' EQphi1' [EQq2 EQphi'] Hcom'];
+  clear q1 EQq1 q2 EQq2 a' EQa' phi'' EQphi'' phi1' EQphi1';
   rewrite<- Hcom' in EQv';
   rewrite<- Hcom' in HrA';
   clear com' Hcom';
-  destruct HrAp as [Hphi_1_n [Hphi_n_3 [Htst_phi3 P3eq]]];
+  destruct HrAp as [Hphi_1 [Hphi_3 [Htst_phi3 P3eq]]];
   assert (H := updater_must_exist
-    theta_n z tst asgn th1 u phi_n phi3
-    Hphi_n Htst_phi3 P3eq Hphi_n_3);
+    theta z tst asgn th1 u phi phi3
+    Hphi Htst_phi3 P3eq Hphi_3);
   destruct H as [d [Htst Hfrs_m]];
 
-  (* EQth': theta' = update theta_n asgn d *)
-  remember (update theta_n asgn d) as theta' eqn:EQth';
+  (* EQth': theta' = update theta asgn d *)
+  remember (update theta asgn d) as theta' eqn:EQth';
 
   (* Hfresh': freshness_p_on_stack theta' u *)
   rewrite EQu in Hproper;
   rewrite EQu in Hfresh;
   rewrite EQu in Hfrs_m;
-  apply (moveA_keeps_freshness_p_when_skip theta_n th1 d z uu tst asgn
+  apply (moveA_keeps_freshness_p_when_skip theta th1 d z uu tst asgn
   Htst Hproper Hfrs_m)
   in Hfresh as Hfresh';
   rewrite<- EQth' in Hfresh';
 
-  (* Hphi3: (theta_n, z, theta') |= phi3 *)
+  (* Hphi3: (theta, z, theta') |= phi3 *)
   assert (Htst_th' := conj Htst EQth');
   apply ex_intro with (x := d) in Htst_th';
   apply meanings_of_Phi_tst_asgn in Htst_th';
   destruct Htst_th' as [phi3' [P3'eq [Htst_phi3' Hphi3]]];
-  apply (double_models_means_composableT th1 theta_n theta' z phi_n phi3'
-    Hphi_n) in Hphi3 as Hphi_n_3';
-  assert (EQphi3' := conj Hphi_n_3' Htst_phi3');
-  apply (at_most_one_Phi_tst_asgn tst asgn phi_n phi3 phi3'
-  (conj P3eq P3'eq) (conj Hphi_n_3 Htst_phi3)) in EQphi3';
+  apply (double_models_means_composableT th1 theta theta' z phi phi3'
+    Hphi) in Hphi3 as Hphi_3';
+  assert (EQphi3' := conj Hphi_3' Htst_phi3');
+  apply (at_most_one_Phi_tst_asgn tst asgn phi phi3 phi3'
+  (conj P3eq P3'eq) (conj Hphi_3 Htst_phi3)) in EQphi3';
   rewrite<- EQphi3' in Hphi3;
-  clear phi3' EQphi3' P3'eq Htst_phi3' Hphi_n_3';
+  clear phi3' EQphi3' P3'eq Htst_phi3' Hphi_3';
 
-  (* weak_freshness_p th1 z theta_n theta' *)
-  assert (Hwfrs := update_has_weak_freshness_p th1 theta_n z d tst asgn uu
+  (* weak_freshness_p th1 z theta theta' *)
+  assert (Hwfrs := update_has_weak_freshness_p th1 theta z d tst asgn uu
     Htst Hfrs_m);
   rewrite<- EQth' in Hwfrs.
 
@@ -1336,8 +1334,8 @@ Proof.
   clear th1' EQth1' phi1' EQphi1' EQvv.
 
   apply Stack_R_stack'_cons.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply meanings_of_compositionT with theta_n;
+  -- (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply meanings_of_compositionT with theta;
   auto.
   -- (* stack_R_stack' th1 nil phi1 nil *)
   apply Stack_R_stack'_nil.
@@ -1345,8 +1343,8 @@ Proof.
   * (* phi0' :: vv' = vv -> ...*)
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta');
+  -- (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply (meanings_of_compositionT th1 theta theta');
   auto.
   -- (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
   apply Stack_R_stack'_cons;
@@ -1407,8 +1405,8 @@ Proof.
   exists j.
   unfold theta_bot.
   reflexivity.
-  -- (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta' z);
+  -- (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply (meanings_of_compositionT th1 theta theta' z);
   auto.
 
   * (* uu = (d0, th0) :: uu -> ... *)
@@ -1432,7 +1430,7 @@ Proof.
   unfold freshness_p_on_triple in Hfresh'.
   exact Hfresh'.
   -- (* (th1, z, theta') |= compositionT ... *)
-  apply meanings_of_compositionT with theta_n;
+  apply meanings_of_compositionT with theta;
   auto.
 
   - (* com' = push' phi4 -> ... *)
@@ -1461,12 +1459,12 @@ Proof.
 
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j', theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta_n;
+  apply theta_models_phi_to_Phi_eq_j with z theta;
   auto.
   -- (* stack_R_stack' theta' ((z, th1) :: nil) ... *)
   apply Stack_R_stack'_cons.
-  ++ (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply meanings_of_compositionT with theta_n;
+  ++ (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply meanings_of_compositionT with theta;
   auto.
   ++ (* stack_R_stack' th1 nil phi1 nil *)
   apply Stack_R_stack'_nil.
@@ -1475,12 +1473,12 @@ Proof.
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j, theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta_n;
+  apply theta_models_phi_to_Phi_eq_j with z theta;
   auto.
   -- (* stack_R_stack' theta' ((z, th1) :: ...) ... *)
   apply Stack_R_stack'_cons.
-  ++ (* (th1, z, theta') |= compositionT phi_n phi3 *)
-  apply (meanings_of_compositionT th1 theta_n theta');
+  ++ (* (th1, z, theta') |= compositionT phi phi3 *)
+  apply (meanings_of_compositionT th1 theta theta');
   auto.
   ++ (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
   apply Stack_R_stack'_cons;
