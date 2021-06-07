@@ -89,9 +89,9 @@ Definition not_contain d (cell: D * Theta) :=
     (_, theta) => forall i, theta i <> d
   end.
 
-Definition freshness_p_on_moveA (tst : Tst) d (u : Stack) :=
-  (forall xi, tst xi <> true) ->
-  Forall (not_contain d) u.
+Definition freshness_p_on_moveA (tst : Tst) (asgn : Asgn) d (u : Stack) :=
+  (forall xi, tst xi <> true) -> (exists i, asgn i = true) ->
+    Forall (not_contain d) u.
 
 Inductive moveA
   : Config -> Sigma -> D -> Config -> Prop :=
@@ -100,7 +100,7 @@ Inductive moveA
     ruleA q1 a tst q2 asgn com ->
     (theta, d, z) |= tst ->
     theta' = update theta asgn d ->
-    freshness_p_on_moveA tst d ((z, zth) :: u) ->
+    freshness_p_on_moveA tst asgn d ((z, zth) :: u) ->
     moveA (q1, theta,  ((z, zth) :: u)) a d
           (q2, theta', update_stack ((z, zth) :: u) theta' com).
 
@@ -390,7 +390,7 @@ Lemma updater_must_exist :
     composableT phi phi3 ->
   exists d,
     (theta, d, e) |= tst /\
-    freshness_p_on_moveA tst d u.
+    freshness_p_on_moveA tst asgn d u.
 Proof.
   intros theta e tst.
   intros asgn th u phi phi3.
@@ -491,14 +491,14 @@ Proof.
 Qed.
 
 Lemma substack_keeps_freshness_p_on_moveA :
-  forall tst d a u1 u2,
-  freshness_p_on_moveA tst d (u1 ++ (a :: u2)) ->
-  freshness_p_on_moveA tst d (u1 ++ u2).
+  forall tst asgn d a u1 u2,
+  freshness_p_on_moveA tst asgn d (u1 ++ (a :: u2)) ->
+  freshness_p_on_moveA tst asgn d (u1 ++ u2).
 Proof.
-  intros tst d a u1 u2.
+  intros tst asgn d a u1 u2.
   unfold freshness_p_on_moveA.
-  intros Hfrs Htst.
-  assert (Hfrs' := Hfrs Htst).
+  intros Hfrs Htst Hasgn.
+  assert (Hfrs' := Hfrs Htst Hasgn).
   generalize Hfrs'.
   apply (Forall_sublist _ a).
 Qed.
@@ -508,7 +508,7 @@ Qed.
 Lemma update_has_weak_freshness_p :
   forall th1 theta z d tst asgn u,
   (theta, d, z) |= tst ->
-  freshness_p_on_moveA tst d ((z, th1) :: u) ->
+  freshness_p_on_moveA tst asgn d ((z, th1) :: u) ->
   weak_freshness_p th1 z theta (update theta asgn d).
 Proof.
   intros th1 theta z d tst asgn u.
@@ -520,15 +520,16 @@ Proof.
   destruct (tst_is_empty_or_not tst)
   as [Htst_empty | Htst_not_empty].
   ++ (* tst_empty -> ... *)
-  apply Hfrs_m in Htst_empty as Hfrs_m'.
+  generalize dependent H.
+  case_eq (asgn j); intros EQasgn H.
+  ** (* asgn j = true -> ... *)
+  apply ex_intro with (x := j) in EQasgn.
+  assert (Hfrs_m' := Hfrs_m Htst_empty EQasgn).
   rewrite Forall_forall in Hfrs_m'.
   assert (Hzin : In (z, th1) ((z, th1) :: u)).
   { apply in_eq. }
   assert (Hm := Hfrs_m' (z, th1) Hzin).
   simpl in Hm.
-  generalize dependent H.
-  case (asgn j); intro H.
-  ** (* asgn j = true -> ... *)
   apply Hm in H.
   contradiction.
   ** (* asgn j = false -> ... *)
@@ -577,7 +578,7 @@ Local Lemma keeping_freshness_p_when_skip :
   forall theta zth d z u tst asgn,
   (theta, d, z) |= tst ->
   is_proper_stack ((z, zth) :: u) ->
-  freshness_p_on_moveA tst d ((z, zth) :: u) ->
+  freshness_p_on_moveA tst asgn d ((z, zth) :: u) ->
   forall d1 d2 th1 th2,
   In (d1, th1) ((z, zth) :: u) ->
   In (d2, th2) u ->
@@ -600,21 +601,21 @@ Proof.
   as [Htst_empty | Htst_not_empty].
 
   - (* tst_empty -> ... *)
-  apply Hfrs_m in Htst_empty as Hfrs_m'.
-  rewrite Forall_forall in Hfrs_m'.
-  assert (Hth2' : In (d2, th2) ((z, zth) :: u)).
-  { apply in_cons. exact Hth2. }
-  assert (Hm := Hfrs_m' (d2, th2) Hth2').
-  simpl in Hm.
-
   unfold freshness_p_on_triple.
   unfold freshness_p.
   split.
   ** (* forall i j, th1 i = update ... -> ... *)
   intros i j.
   unfold update.
-  case (asgn j); intros EQth2.
+  case_eq (asgn j); intros EQasgn EQth2.
   +++ (* asgn j = true -> ... *)
+  apply ex_intro with (x := j) in EQasgn.
+  assert (Hfrs_m' := Hfrs_m Htst_empty EQasgn).
+  rewrite Forall_forall in Hfrs_m'.
+  assert (Hth2' : In (d2, th2) ((z, zth) :: u)).
+  { apply in_cons. exact Hth2. }
+  assert (Hm := Hfrs_m' (d2, th2) Hth2').
+  simpl in Hm.
   apply Hm in EQth2.
   contradiction.
   +++ (* asgn j = false -> ... *)
@@ -623,8 +624,15 @@ Proof.
   ** (* forall j, d1 = update ... -> ... *)
   intros j.
   unfold update.
-  case (asgn j); intros EQd2.
+  case_eq (asgn j); intros EQasgn EQd2.
   +++ (* asgn j = true -> ... *)
+  apply ex_intro with (x := j) in EQasgn.
+  assert (Hfrs_m' := Hfrs_m Htst_empty EQasgn).
+  rewrite Forall_forall in Hfrs_m'.
+  assert (Hth2' : In (d2, th2) ((z, zth) :: u)).
+  { apply in_cons. exact Hth2. }
+  assert (Hm := Hfrs_m' (d2, th2) Hth2').
+  simpl in Hm.
   (* destruct Hproper *)
   unfold is_proper_stack in Hproper.
   rewrite Forall_forall in Hproper.
@@ -723,7 +731,7 @@ Lemma moveA_keeps_freshness_p_when_skip :
   forall theta zth d z u tst asgn,
   (theta, d, z) |= tst ->
   is_proper_stack ((z, zth) :: u) ->
-  freshness_p_on_moveA tst d ((z, zth) :: u) ->
+  freshness_p_on_moveA tst asgn d ((z, zth) :: u) ->
   freshness_p_on_stack theta ((z, zth) :: u) ->
   freshness_p_on_stack (update theta asgn d) ((z, zth) :: u).
 Proof.
@@ -792,7 +800,7 @@ Proof.
   * (* Forall2 ... u *)
   apply IHu.
   -- apply (substack_is_proper_stack (d1, th1) ((z, zth) :: nil)); auto.
-  -- apply (substack_keeps_freshness_p_on_moveA _ _ (d1,th1) ((z,zth)::nil));
+  -- apply (substack_keeps_freshness_p_on_moveA _ _ _ (d1,th1) ((z,zth)::nil));
      auto.
   -- apply (Forall3_sublist _ (d1, th1) ((bot,theta)::(z,zth)::nil)); auto.
 
