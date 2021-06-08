@@ -1484,3 +1484,21 @@ Proof.
   apply Stack_R_stack'_cons;
   auto.
 Qed.
+
+Parameter q0 : Q.
+Lemma start_configs_satisfy_R :
+  config_R_config'
+    (q0, theta_bot, ((bot, theta_bot) :: nil))
+    ((q0, phi_zero), (phi_zero :: nil)).
+Proof.
+  assert (H: (theta_bot, bot, theta_bot) |= phi_zero).
+  { unfold models.
+  unfold two_Theta_D_models_Phi.
+  unfold theta_bot.
+  unfold phi_zero.
+  repeat split; auto.
+  }
+  apply Config_R_config'.
+  apply Stack_R_stack'_cons;
+  [| apply Stack_R_stack'_nil]; auto.
+Qed.
