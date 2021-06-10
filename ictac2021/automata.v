@@ -910,22 +910,31 @@ Qed.
 
 (* Theorem on bisimilarity *)
 
+Section Bisimilarity.
+
+Variables q q' : Q.
+Variable  theta : Theta.
+Variable  phi : Phi.
+Variable  u : Stack.
+Variable  v : Stack'.
+Variable  a : Sigma.
+
+Hypothesis Hfresh : freshness_p_on_stack theta u.
+Hypothesis Hproper : is_proper_stack u.
+Hypothesis Hu_last : last u (bot, theta_bot) = (bot, theta_bot).
+Hypothesis Heq_phi : is_equiv_rel phi.
+Hypothesis Heq_v : Forall is_equiv_rel v.
+
 Lemma bisimilar_1 :
-  forall q theta phi u v a d q' theta' u',
+  forall d theta' u',
     moveA (q, theta, u) a d (q', theta', u') ->
     config_R_config' (q, theta, u) ((q, phi), v) ->
-    freshness_p_on_stack theta u ->
-    is_proper_stack u ->
-    last u (bot, theta_bot) = (bot, theta_bot) ->
-    is_equiv_rel phi -> Forall is_equiv_rel v ->
   exists phi' v',
     moveA' ((q, phi), v) a ((q', phi'), v') /\
     config_R_config' (q', theta', u') ((q', phi'), v').
 Proof.
-  intros q theta phi u v.
-  intros a d q' theta' u'.
+  intros d theta' u'.
   intros HmA HR.
-  intros Hfresh Hproper Hu_last Heq_phi Heq_v.
   inversion HmA as [tst asgn com z zth uu q1 q2 a' d' th1 th2
     HrA Htst EQth' Hfrs_m [EQq1 EQth1 EQu] EQa' EQd' [EQq2 EQth2 EQu']].
   clear q1 EQq1 th1 EQth1 a' EQa' d' EQd' q2 EQq2 th2 EQth2.
@@ -1207,21 +1216,15 @@ Proof.
 Qed.
 
 Lemma bisimilar_2 :
-  forall q theta phi u v a q' phi' v',
+  forall phi' v',
     moveA' ((q, phi), v) a ((q', phi'), v') ->
     config_R_config' (q, theta, u) ((q, phi), v) ->
-    freshness_p_on_stack theta u ->
-    is_proper_stack u ->
-    last u (bot, theta_bot) = (bot, theta_bot) ->
-    is_equiv_rel phi -> Forall is_equiv_rel v ->
   exists d theta' u',
     moveA (q, theta, u) a d (q', theta', u') /\
     config_R_config' (q', theta', u') ((q', phi'), v').
 Proof.
-  intros q theta phi u v.
-  intros a q' phi' v'.
+  intros phi' v'.
   intros HmA' HR.
-  intros Hfresh Hproper Hu_last Heq_phi Heq_v.
 
   inversion HmA' as [q1 q2 a' phi1 vv com' HrA' [EQq1 EQv] EQa' [EQq2 EQv']].
   clear q1 EQq1 q2 EQq2 a' EQa'.
@@ -1484,6 +1487,8 @@ Proof.
   apply Stack_R_stack'_cons;
   auto.
 Qed.
+
+End Bisimilarity.
 
 Parameter q0 : Q.
 Lemma start_configs_satisfy_R :
