@@ -6,17 +6,19 @@
  * to settings.json.
  *)
 
-Require Import equiv.
+Require Export equiv.
 Require Import Lists.List.
 
 (* Rules of RPDA A and PDA A' *)
 
+Section RPDA_to_PDA.
+
 Local Open Scope type_scope.  (* for '*' *)
 
-Parameter Sigma : Set.  (* finite alphabet *)
+Variable Sigma : Set.  (* finite alphabet *)
 
 (* finite control states *)
-Parameter Q : Set.
+Variable Q : Set.
 Definition Q' := Q * Phi.
 
 Inductive Com :=
@@ -28,7 +30,7 @@ Inductive Com' :=
   | skip'
   | push' (phi : Phi).
 
-Parameter ruleA :
+Variable ruleA :
   Q -> Sigma -> Tst -> Q -> Asgn -> Com -> Prop.
 
 Definition ruleA'_premise phi1 phi2 phi3 tst asgn :=
@@ -1490,7 +1492,7 @@ Qed.
 
 End Bisimilarity.
 
-Parameter q0 : Q.
+Variable q0 : Q.
 Lemma start_configs_satisfy_R :
   config_R_config'
     (q0, theta_bot, ((bot, theta_bot) :: nil))
@@ -1507,3 +1509,5 @@ Proof.
   apply Stack_R_stack'_cons;
   [| apply Stack_R_stack'_nil]; auto.
 Qed.
+
+End RPDA_to_PDA.
