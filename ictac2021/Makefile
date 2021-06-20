@@ -1,12 +1,12 @@
-targets = automata.vo
-srcs = equiv.v automata.v
+targets = automata.vo pds.vo
+srcs = equiv.v automata.v pds.v
 vobjs = $(srcs:.v=.vo)
 
 .PHONY: clean all default doc distclean
 %.vo: %.v
 	coqc $<
 
-default: equiv.vo automata.vo
+default: equiv.vo automata.vo pds.vo
 all: $(targets)
 $(targets): equiv.vo
 
