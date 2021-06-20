@@ -222,9 +222,9 @@ Proof.
   clear x EQx l EQl.
   apply Forall2_cons.
   + (* Forall ... *)
-  apply Forall_sublist with a; auto.
+  now apply Forall_sublist with a.
   + (* Forall2 ... *)
-  apply IHu1; auto.
+  now apply IHu1.
 Qed.
 
 Local Lemma Forall3_sublist {A : Type} :
@@ -246,9 +246,9 @@ Proof.
   clear x EQx l EQl.
   apply Forall3_cons.
   + (* Forall ... *)
-  apply Forall2_sublist with a; auto.
+  now apply Forall2_sublist with a.
   + (* Forall2 ... *)
-  apply IHu1; auto.
+  now apply IHu1.
 Qed.
 
 Local Lemma Forall2_hd2 {A : Type} :
@@ -299,7 +299,7 @@ Proof.
   clear x l EQx EQl Hfor3.
   inversion Hfor3' as [| x l Hfor2' Hfor3 [EQx EQl]].
   clear x l EQx EQl Hfor3'.
-  apply Forall3_cons; auto.
+  now apply Forall3_cons.
 Qed.
 
 Lemma substack_keeps_freshness_p :
@@ -763,8 +763,8 @@ Proof.
   unfold freshness_p_on_triple.
   unfold freshness_p.
   split.
-  -- intros i j Hth1. exists j; auto.
-  -- intros j Hd1. exists j; auto.
+  -- intros i j Hth1. now exists j.
+  -- intros j Hd1. now exists j.
 
   + (* Forall2 ... u *)
   induction u as [| [d1 th1] u IHu].
@@ -801,13 +801,12 @@ Proof.
 
   * (* Forall2 ... u *)
   apply IHu.
-  -- apply (substack_is_proper_stack (d1, th1) ((z, zth) :: nil)); auto.
-  -- apply (substack_keeps_freshness_p_on_moveA _ _ _ (d1,th1) ((z,zth)::nil));
-     auto.
-  -- apply (Forall3_sublist _ (d1, th1) ((bot,theta)::(z,zth)::nil)); auto.
+  -- now apply (substack_is_proper_stack (d1, th1) ((z, zth) :: nil)).
+  -- now apply (substack_keeps_freshness_p_on_moveA _ _ _ (d1,th1) ((z,zth)::nil)).
+  -- now apply (Forall3_sublist _ (d1, th1) ((bot,theta)::(z,zth)::nil)).
 
   - (* Forall3 ... ((z, zth) :: u) *)
-  apply (Forall3_sublist _ (bot, theta) nil); auto.
+  now apply (Forall3_sublist _ (bot, theta) nil).
 Qed.
 
 Lemma moveA_keeps_freshness_p :
@@ -826,7 +825,7 @@ Proof.
   assert (Hskip: freshness_p_on_stack theta' u).
   { rewrite EQth'. rewrite<- EQu.
   apply moveA_keeps_freshness_p_when_skip with tst;
-  try rewrite EQu; auto; rewrite<- EQu; auto.
+  try rewrite EQu; auto; now rewrite<- EQu.
   }
 
   case_eq com;
@@ -944,8 +943,7 @@ Proof.
   { rewrite EQth'. rewrite<- EQu.
   rewrite<- EQu in Hproper.
   rewrite<- EQu in Hfresh.
-  apply moveA_keeps_freshness_p_when_skip with tst;
-  auto. }
+  now apply moveA_keeps_freshness_p_when_skip with tst. }
 
   case_eq v.
   { (* v = nil -> ... *)
@@ -987,18 +985,16 @@ Proof.
   as [th2 phi1' Hphi1 EQth2 EQuu EQphi1' EQvv |
      th2 th1' d1 phi' phi1' uu1 vv1 Hphi' HsR2 EQth2 EQuu1 EQphi' EQvv1].
   -- (* nil = vv -> ... *)
-  apply (double_models_means_composable theta_bot th1 theta bot z);
-  auto.
+  now apply (double_models_means_composable theta_bot th1 theta bot z).
   -- (* (phi1' :: vv1) = vv -> ... *)
-  apply (double_models_means_composable th1' th1 theta d1 z);
-  auto.
+  now apply (double_models_means_composable th1' th1 theta d1 z).
   }
 
   (* weak_freshness_p th1 z theta theta' *)
   assert (Hwfrs: weak_freshness_p th1 z theta theta').
   { rewrite EQth'.
   apply (update_has_weak_freshness_p th1 theta z d tst asgn uu);
-  try rewrite EQth1; auto. }
+  now try rewrite EQth1. }
 
   (* phi3 *)
   assert (HtstEQth' := conj Htst EQth').
@@ -1008,8 +1004,7 @@ Proof.
 
   (* composableT phi phi3 *)
   assert (Hphi_3: composableT phi phi3).
-  { apply (double_models_means_composableT th1 theta theta' z);
-  auto. }
+  { now apply (double_models_means_composableT th1 theta theta' z). }
 
   case_eq com.
   - (* com = pop -> ... *)
@@ -1023,10 +1018,7 @@ Proof.
   split.
   + (* moveA' ... *)
   apply MoveA'.
-  apply ruleA'_pop with (tst := tst) (asgn := asgn);
-  auto.
-  unfold ruleA'_premise.
-  split; auto.
+  now apply ruleA'_pop with (tst := tst) (asgn := asgn).
 
   + (* config_R_config' ... *)
   unfold update_stack in EQu'.
@@ -1074,8 +1066,7 @@ Proof.
   unfold theta_bot.
   reflexivity.
   -- (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply (meanings_of_compositionT th1 theta theta' z);
-  auto.
+  now apply (meanings_of_compositionT th1 theta theta' z).
 
   * (* vv = phi0 :: vv -> ... *)
   inversion HsR1
@@ -1101,8 +1092,7 @@ Proof.
   rewrite EQth1.
   exact Hfresh'.
   -- (* (th1, z, theta') |= compositionT ... *)
-  apply meanings_of_compositionT with theta;
-  auto.
+  now apply meanings_of_compositionT with theta.
 
   - (* com = skip -> ... *)
   intros Hcom.
@@ -1115,10 +1105,7 @@ Proof.
   split.
   + (* moveA' ... *)
   apply MoveA'.
-  apply ruleA'_skip with (tst := tst) (asgn := asgn);
-  auto.
-  unfold ruleA'_premise.
-  split; auto.
+  now apply ruleA'_skip with (tst := tst) (asgn := asgn).
 
   + (* config_R_config' ... *)
   rewrite EQu in EQu'.
@@ -1140,20 +1127,16 @@ Proof.
 
   apply Stack_R_stack'_cons.
   -- (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply meanings_of_compositionT with theta;
-  auto.
+  now apply meanings_of_compositionT with theta.
   -- (* stack_R_stack' th1 nil phi1 nil *)
-  apply Stack_R_stack'_nil.
-  auto.
+  now apply Stack_R_stack'_nil.
   * (* phi0' :: vv' = vv -> ...*)
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
   -- (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply (meanings_of_compositionT th1 theta theta');
-  auto.
+  now apply (meanings_of_compositionT th1 theta theta').
   -- (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
-  apply Stack_R_stack'_cons;
-  auto.
+  now apply Stack_R_stack'_cons.
 
   - (* com = push j -> ... *)
   intros j Hcom.
@@ -1166,10 +1149,7 @@ Proof.
   split.
   + (* moveA' ... *)
   apply MoveA'.
-  apply ruleA'_push with (tst := tst) (asgn := asgn);
-  auto.
-  unfold ruleA'_premise.
-  split; auto.
+  now apply ruleA'_push with (tst := tst) (asgn := asgn).
 
   + (* config_R_config' ... *)
   rewrite EQu in EQu'.
@@ -1191,30 +1171,24 @@ Proof.
 
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j, theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta;
-  auto.
+  now apply theta_models_phi_to_Phi_eq_j with z theta.
   -- (* stack_R_stack' theta' ((z, th1) :: nil) ... *)
   apply Stack_R_stack'_cons.
   ++ (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply meanings_of_compositionT with theta;
-  auto.
+  now apply meanings_of_compositionT with theta.
   ++ (* stack_R_stack' th1 nil phi1 nil *)
-  apply Stack_R_stack'_nil.
-  auto.
+  now apply Stack_R_stack'_nil.
   * (* phi0' :: vv' = vv -> ...*)
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j, theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta;
-  auto.
+  now apply theta_models_phi_to_Phi_eq_j with z theta.
   -- (* stack_R_stack' theta' ((z, th1) :: ...) ... *)
   apply Stack_R_stack'_cons.
   ++ (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply (meanings_of_compositionT th1 theta theta');
-  auto.
+  now apply (meanings_of_compositionT th1 theta theta').
   ++ (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
-  apply Stack_R_stack'_cons;
-  auto.
+  now apply Stack_R_stack'_cons.
 Qed.
 
 Lemma bisimilar_2 :
@@ -1321,7 +1295,7 @@ Proof.
   rewrite EQu.
   split.
   + (* moveA ... *)
-  apply MoveA with tst asgn; auto.
+  now apply MoveA with tst asgn.
 
   + (* config_R_config' ... *)
   rewrite<- EQv' in HmA'.
@@ -1340,20 +1314,16 @@ Proof.
 
   apply Stack_R_stack'_cons.
   -- (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply meanings_of_compositionT with theta;
-  auto.
+  now apply meanings_of_compositionT with theta.
   -- (* stack_R_stack' th1 nil phi1 nil *)
-  apply Stack_R_stack'_nil.
-  auto.
+  now apply Stack_R_stack'_nil.
   * (* phi0' :: vv' = vv -> ...*)
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
   -- (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply (meanings_of_compositionT th1 theta theta');
-  auto.
+  now apply (meanings_of_compositionT th1 theta theta').
   -- (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
-  apply Stack_R_stack'_cons;
-  auto.
+  now apply Stack_R_stack'_cons.
 
   - (* com' = pop' -> ... *)
   exists d.
@@ -1362,7 +1332,7 @@ Proof.
   rewrite EQu.
   split.
   + (* moveA ... *)
-  apply MoveA with tst asgn; auto.
+  now apply MoveA with tst asgn.
 
   + (* config_R_config' ... *)
   unfold update_stack' in EQv'.
@@ -1411,8 +1381,7 @@ Proof.
   unfold theta_bot.
   reflexivity.
   -- (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply (meanings_of_compositionT th1 theta theta' z);
-  auto.
+  now apply (meanings_of_compositionT th1 theta theta' z).
 
   * (* uu = (d0, th0) :: uu -> ... *)
   inversion HsR1
@@ -1435,8 +1404,7 @@ Proof.
   unfold freshness_p_on_triple in Hfresh'.
   exact Hfresh'.
   -- (* (th1, z, theta') |= compositionT ... *)
-  apply meanings_of_compositionT with theta;
-  auto.
+  now apply meanings_of_compositionT with theta.
 
   - (* com' = push' phi4 -> ... *)
   exists d.
@@ -1445,7 +1413,7 @@ Proof.
   rewrite EQu.
   split.
   + (* moveA ... *)
-  apply MoveA with tst asgn; auto.
+  now apply MoveA with tst asgn.
 
   + (* config_R_config' ... *)
   rewrite<- EQv' in HmA'.
@@ -1464,30 +1432,24 @@ Proof.
 
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j', theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta;
-  auto.
+  now apply theta_models_phi_to_Phi_eq_j with z theta.
   -- (* stack_R_stack' theta' ((z, th1) :: nil) ... *)
   apply Stack_R_stack'_cons.
   ++ (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply meanings_of_compositionT with theta;
-  auto.
+  now apply meanings_of_compositionT with theta.
   ++ (* stack_R_stack' th1 nil phi1 nil *)
-  apply Stack_R_stack'_nil.
-  auto.
+  now apply Stack_R_stack'_nil.
   * (* phi0' :: vv' = vv -> ...*)
   clear th1' EQth1' phi1' EQphi1'.
   apply Stack_R_stack'_cons.
   -- (* (theta', theta' j, theta') |= phi_to_Phi_eq_j ... *)
-  apply theta_models_phi_to_Phi_eq_j with z theta;
-  auto.
+  now apply theta_models_phi_to_Phi_eq_j with z theta.
   -- (* stack_R_stack' theta' ((z, th1) :: ...) ... *)
   apply Stack_R_stack'_cons.
   ++ (* (th1, z, theta') |= compositionT phi phi3 *)
-  apply (meanings_of_compositionT th1 theta theta');
-  auto.
+  now apply (meanings_of_compositionT th1 theta theta').
   ++ (* stack_R_stack' th1 ((d0, th0) :: uu') ... *)
-  apply Stack_R_stack'_cons;
-  auto.
+  now apply Stack_R_stack'_cons.
 Qed.
 
 End Bisimilarity.
@@ -1503,7 +1465,7 @@ Proof.
   unfold two_Theta_D_models_Phi.
   unfold theta_bot.
   unfold phi_zero.
-  repeat split; auto.
+  now repeat split.
   }
   apply Config_R_config'.
   apply Stack_R_stack'_cons;
