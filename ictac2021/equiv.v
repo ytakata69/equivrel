@@ -143,6 +143,22 @@ Definition Phi_tst_asgn (tst : Tst) (asgn : Asgn) (phi : Phi) :=
 Definition Phi_eq_j (j : nat) (phi : Phi) :=
   phi Xtop (X j) /\ forall i, phi (X i) (X' i).
 
+(* equivalence relations over (X i)'s *)
+
+Definition is_simpl_rel (phi : Phi) :=
+  forall xi xj : register,
+    match xi, xj with
+    | (X i), (X j) => True
+    | x, y => phi x y <-> x = y
+    end.
+
+Definition lat (phi : Phi) : Phi :=
+  fun xi xj : register =>
+    match xi, xj with
+    | (X i), (X j) => phi (X' i) (X' j)
+    | x, y => x = y
+    end.
+
 (* models *)
 
 Class Models (A B : Type) := models : A -> B -> Prop.
@@ -164,6 +180,9 @@ Instance two_Theta_D_models_Phi : Models (Theta * D * Theta) Phi :=
           (forall i,   theta  i = d <-> phi (X  i) Xtop) /\
           (forall i,   theta' i = d <-> phi (X' i) Xtop)
       end }.
+Instance Theta_models_Phi : Models Theta Phi :=
+  { models theta phi := is_simpl_rel phi /\
+                        forall i j, theta i = theta j <-> phi (X i) (X j) }.
 
 (* Utilities *)
 
@@ -1984,4 +2003,131 @@ Proof.
   * apply H25.
   apply P2sym.
   exact H2.
+Qed.
+
+(* equivalence relations over (X i)'s *)
+
+Lemma lat_is_simpl_rel :
+  forall phi : Phi,
+  is_simpl_rel (lat phi).
+Proof.
+  intros phi.
+  unfold is_simpl_rel.
+  intros xi xj.
+  case xi.
+  - intro i. case xj; auto.
+  + now unfold lat.
+  + now unfold lat.
+  - intro i. case xj;
+  now unfold lat.
+  - now unfold lat.
+Qed.
+
+Lemma lat_is_equiv_rel :
+  forall phi : Phi,
+  is_equiv_rel phi -> is_equiv_rel (lat phi).
+Proof.
+  intros phi Heq_phi.
+  destruct Heq_phi as [Href [Hsym Htra]].
+  unfold is_equiv_rel.
+  split; [| split].
+  - (* is_reflexive (lat phi) *)
+  unfold is_reflexive.
+  intros x.
+  case x.
+  + intro i.
+  unfold lat.
+  apply Href.
+  + now unfold lat.
+  + now unfold lat.
+  - (* is_symmetric (lat phi) *)
+  unfold is_symmetric.
+  intros x y.
+  case x.
+  + intro i. case y.
+  * intro j.
+  unfold lat.
+  apply Hsym.
+  * now unfold lat.
+  * now unfold lat.
+  + intro i. case y;
+  now unfold lat.
+  + case y; now unfold lat.
+  - (* is_transitive (lat phi) *)
+  unfold is_transitive.
+  intros x y z.
+  case x.
+  + intro i. case y.
+  * intro l. case z.
+  -- intro j.
+  unfold lat.
+  apply Htra.
+  -- now unfold lat.
+  -- now unfold lat.
+  * intro l. case z;
+  now unfold lat.
+  * now unfold lat.
+  + intro i. case y.
+  * intro l. case z;
+  now unfold lat.
+  * intro l. case z.
+  -- now unfold lat.
+  -- intro j.
+  unfold lat.
+  intros [H1 H2].
+  now rewrite H1.
+  -- now unfold lat.
+  * case z; now unfold lat.
+  + case y;
+  case z; now unfold lat.
+Qed.
+
+Lemma models_phi_implies_models_lat_phi :
+  forall phi theta th1 d1,
+  (th1, d1, theta) |= phi ->
+  theta |= lat phi.
+Proof.
+  intros phi theta th1 d1.
+  intros Hphi.
+  unfold models in Hphi.
+  unfold two_Theta_D_models_Phi in Hphi.
+  destruct Hphi as [_ [Hphi _]].
+  unfold models.
+  unfold Theta_models_Phi.
+  split.
+  - (* is_simpl_rel (lat phi) *)
+  apply lat_is_simpl_rel.
+  - (* forall i j, theta i = theta j <-> lat phi (X i) (X j) *)
+  now unfold lat.
+Qed.
+
+Lemma lat_phi_eq_simpl_phi :
+  forall phi phi' theta th1 d1,
+  theta |= phi' ->
+  (th1, d1, theta) |= phi ->
+  lat phi = phi'.
+Proof.
+  intros phi phi' theta th1 d1.
+  intros Hphi' Hphi.
+  unfold models in Hphi'.
+  unfold Theta_models_Phi in Hphi'.
+  destruct Hphi' as [Hsimpl Hphi'].
+  unfold models in Hphi.
+  unfold two_Theta_D_models_Phi in Hphi.
+  destruct Hphi as [_ [Hphi _]].
+
+  apply Phi_extensionality.
+  intros x y.
+  unfold is_simpl_rel in Hsimpl.
+  generalize (Hsimpl x y).
+  case x; clear Hsimpl.
+  - intro i. case y.
+  + intro j. unfold lat.
+  rewrite<- Hphi'.
+  now rewrite<- Hphi.
+  + now unfold lat.
+  + now unfold lat.
+  - intro i. case y;
+  now unfold lat.
+  - now unfold lat.
 Qed.
