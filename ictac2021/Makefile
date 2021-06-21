@@ -1,14 +1,14 @@
 targets = automata.vo pds.vo
-srcs = equiv.v automata.v pds.v
+srcs = equiv.v stack.v automata.v pds.v
 vobjs = $(srcs:.v=.vo)
 
 .PHONY: clean all default doc distclean
 %.vo: %.v
 	coqc $<
 
-default: equiv.vo automata.vo pds.vo
+default: automata.vo pds.vo
 all: $(targets)
-$(targets): equiv.vo
+automata.vo pds.vo: equiv.vo stack.vo
 
 doc: $(vobjs)
 	coqdoc --gallina $(srcs)
