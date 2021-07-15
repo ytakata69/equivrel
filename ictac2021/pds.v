@@ -73,6 +73,7 @@ Inductive moveA'
 
 Axiom updater_must_exist :
   forall theta e phi u,
+    (theta, e) |= phi ->
   exists theta',
     (theta, e, theta') |= phi /\
     freshness_p_on_moveA theta' theta e u.
@@ -732,8 +733,10 @@ Proof.
   rewrite<- Hcom' in HrA';
   clear com' Hcom';
   destruct HrAp as [Hphi_1 [Hphi_3 P3eq]];
+  assert (H' := composableT_implies_models_phi
+    phi phi3 th1 theta z Hphi Hphi_3);
   assert (H := updater_must_exist
-    theta z phi3 u);
+    theta z phi3 u H');
   destruct H as [theta' [Hphi3 Hfrs_m]];
   exists theta';
 

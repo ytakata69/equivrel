@@ -180,6 +180,13 @@ Instance two_Theta_D_models_Phi : Models (Theta * D * Theta) Phi :=
           (forall i,   theta  i = d <-> phi (X  i) Xtop) /\
           (forall i,   theta' i = d <-> phi (X' i) Xtop)
       end }.
+Instance Theta_D_models_Phi : Models (Theta * D) Phi :=
+  { models pair phi :=
+      match pair with
+      | (theta, d) =>
+          (forall i j, theta  i = theta  j <-> phi (X  i) (X  j)) /\
+          (forall i,   theta  i = d <-> phi (X  i) Xtop)
+      end }.
 Instance Theta_models_Phi : Models Theta Phi :=
   { models theta phi := is_simpl_rel phi /\
                         forall i j, theta i = theta j <-> phi (X i) (X j) }.
@@ -669,6 +676,28 @@ Proof.
 Qed.
 
 (* Composable *)
+
+Lemma composableT_implies_models_phi :
+  forall phi1 phi2 theta1 theta2 z,
+  (theta1, z, theta2) |= phi1 ->
+  composableT phi1 phi2 ->
+  (theta2, z) |= phi2.
+Proof.
+  intros phi1 phi2 theta1 theta2 z.
+  intros Hphi1 Hc.
+  destruct Hphi1 as [_ [Hx'x' [_ [_ Hx't]]]].
+  destruct Hc as [Hc HcT].
+  unfold composable in Hc.
+  unfold models.
+  unfold Theta_D_models_Phi.
+  split.
+  - intros i j.
+  rewrite<- Hc.
+  apply Hx'x'.
+  - intros i.
+  rewrite<- HcT.
+  apply Hx't.
+Qed.
 
 Theorem at_most_one_Phi_tst_asgn :
   forall tst asgn phi phi1 phi2,
