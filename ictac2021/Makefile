@@ -8,7 +8,8 @@ vobjs = $(srcs:.v=.vo)
 
 default: automata.vo pds.vo
 all: $(targets)
-automata.vo pds.vo: equiv.vo stack.vo
+automata.vo pds.vo: stack.vo
+stack.vo: equiv.vo
 
 doc: $(vobjs)
 	coqdoc --gallina $(srcs)
