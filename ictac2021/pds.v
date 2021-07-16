@@ -73,7 +73,7 @@ Inductive moveA'
 
 Axiom updater_must_exist :
   forall theta e phi u,
-    (theta, e) |= phi ->
+    (theta, e) |= phi -> is_equiv_rel phi ->
   exists theta',
     (theta, e, theta') |= phi /\
     freshness_p_on_moveA theta' theta e u.
@@ -736,7 +736,7 @@ Proof.
   assert (H' := composableT_implies_models_phi
     phi phi3 th1 theta z Hphi Hphi_3);
   assert (H := updater_must_exist
-    theta z phi3 u H');
+    theta z phi3 u H' P3eq);
   destruct H as [theta' [Hphi3 Hfrs_m]];
   exists theta';
 
