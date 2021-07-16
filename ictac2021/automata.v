@@ -88,7 +88,7 @@ Proof.
   intros theta e tst.
   intros asgn th u phi phi3.
   intros Hphi Hphi3 P3eq Hcom.
-  destruct P3eq as [_ [P3sym _]].
+  destruct P3eq as [_ P3sym _].
   destruct (tst_is_empty_or_not tst)
   as [Htst_empty | Htst_not_empty].
   - (* tst_empty -> ... *)
@@ -113,7 +113,7 @@ Proof.
   destruct Htst_not_empty as [xi Htst].
   unfold models in Hphi.
   unfold two_Theta_D_models_Phi in Hphi.
-  destruct Hphi as [_ [H11 [_ [_ H12]]]].
+  destruct Hphi as [_ H11 _ _ H12].
   unfold Phi_tst_asgn in Hphi3.
   destruct Hphi3 as [H3 _].
   unfold composableT in Hcom.
