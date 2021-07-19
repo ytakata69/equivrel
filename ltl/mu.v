@@ -1,3 +1,6 @@
+(*
+ * mu-calculus for data words (of finite length)
+ *)
 Require Import Nat Arith.
 Require Import List.
 
@@ -50,7 +53,20 @@ Check (AND (STORE 1 (X (OR (PHI (neg (p 1))) (PHI (pos (p 2)))))) (pos (↑ 1)))
 Check ((↓1, X ((φ ~[p 1]) .\/ (φ [p 2]))) ./\ [↑1]).
 *)
 
-(* semantics *)
+(* utilities *)
+
+Inductive Forall_mid_suffix {A : Type} :
+  (list A -> Prop) -> list A -> list A -> Prop :=
+  | Forall_mid_eq  : forall p l, Forall_mid_suffix p l l
+  | Forall_mid_sfx : forall p s x l,
+      Forall_mid_suffix p s l -> p (x::l) ->
+      Forall_mid_suffix p s (x::l)
+  .
+Definition Forall_nonnil_suffix {A : Type}
+  (p : list A -> Prop) (l : list A) : Prop :=
+  Forall_mid_suffix p nil l.
+
+(* LTL semantics *)
 
 Definition Theta := register -> D.
 
@@ -59,28 +75,6 @@ Definition update
   fun (r : register) => if r =? i then d else theta r.
 
 Definition Env := V -> data_word -> Theta -> bool.
-
-(*
-Inductive models_atom :
-  data_word -> Theta -> ltl_atom -> Prop :=
-  | models_tt : forall w theta, models_atom w theta tt
-  | models_p  : forall h t theta a,
-      fst h a = true -> models_atom (h::t) theta (p a)
-  | models_MATCH : forall h t theta r,
-      snd h = theta r -> models_atom (h::t) theta (↑ r)
-  | models_END : forall theta, models_atom nil theta END
-  .
-
-Inductive models_phi :
-  data_word -> Theta -> ltl_phi -> Prop :=
-  | models_pos : forall w theta atom,
-      models_atom w theta atom ->
-      models_phi w theta (pos atom)
-  | models_neg : forall w theta atom,
-      (~ models_atom w theta atom) ->
-      models_phi w theta (neg atom)
-  .
-*)
 
 Definition models_atom
   (w : data_word) (theta : Theta) (atom : ltl_atom)
@@ -100,17 +94,6 @@ Definition models_phi
   | pos atom =>   models_atom w theta atom
   | neg atom => ~ models_atom w theta atom
   end.
-
-Inductive Forall_mid_suffix {A : Type} :
-  (list A -> Prop) -> list A -> list A -> Prop :=
-  | Forall_mid_base : forall p l, Forall_mid_suffix p l l
-  | Forall_mid_ind  : forall p s x l,
-      Forall_mid_suffix p s l -> p (x::l) ->
-      Forall_mid_suffix p s (x::l)
-  .
-Definition Forall_nonnil_suffix {A : Type}
-  (p : list A -> Prop) (l : list A) : Prop :=
-  Forall_mid_suffix p nil l.
 
 Inductive models :
   data_word -> Theta -> Env -> ltl -> Prop :=
@@ -157,34 +140,6 @@ Axiom ltl_extensionality :
 Axiom Theta_extensionality :
   forall theta1 theta2 : Theta,
     (forall r, theta1 r = theta2 r) -> theta1 = theta2.
-
-(* utilities *)
-
-(*
-Inductive is_suffix_of {A : Type} :
-  list A -> list A -> Prop :=
-  | is_suffix_of_base : forall l, is_suffix_of l l
-  | is_suffix_of_Ind  : forall s h t,
-    is_suffix_of t s -> is_suffix_of (h::t) s
-  .
-
-Local Lemma Forall_mid_only_on_suffix {A : Type} :
-  forall (p : list A -> Prop) s l,
-  Forall_mid_suffix p s l ->
-  is_suffix_of l s.
-Proof.
-  intros p s l.
-  induction l as [| x l IH].
-  - intros H.
-  inversion H.
-  apply is_suffix_of_base.
-  - intros H.
-  inversion H.
-  + apply is_suffix_of_base.
-  + apply is_suffix_of_Ind.
-  now apply IH.
-Qed.
-*)
 
 (* distribution over OR *)
 
@@ -291,7 +246,7 @@ Proof.
   destruct Hor as [H | H].
   + exists w.
   split; auto.
-  apply Forall_mid_base.
+  apply Forall_mid_eq.
   + inversion H
   as [| | | w' th u' p1 p2 Hw Hp EQw' EQth EQu' [EQp1 EQp2]| | | |].
   clear w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
@@ -305,5 +260,5 @@ Proof.
   exists w'.
   rewrite <- EQht in Hp.
   split; auto.
-  apply Forall_mid_ind; auto.
+  apply Forall_mid_sfx; auto.
 Qed.
