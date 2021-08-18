@@ -14,7 +14,7 @@ Definition data_word := list (Sigma * D)%type.
 (* LTL syntax *)
 
 Definition register := nat.
-Parameter V : Set.
+Definition V := nat.
 
 Inductive ltl_atom :=
   | tt : ltl_atom
@@ -55,16 +55,17 @@ Check ((↓1, X ((φ ~[p 1]) .\/ (φ [p 2]))) ./\ [↑1]).
 
 (* utilities *)
 
-Inductive Forall_mid_suffix {A : Type} :
+(* Forall_suffix_until p "cd" "abcd" <-> p "abcd" /\ p "bcd" *)
+Inductive Forall_suffix_until {A : Type} :
   (list A -> Prop) -> list A -> list A -> Prop :=
-  | Forall_mid_eq  : forall p l, Forall_mid_suffix p l l
-  | Forall_mid_sfx : forall p s x l,
-      Forall_mid_suffix p s l -> p (x::l) ->
-      Forall_mid_suffix p s (x::l)
+  | Forall_sfx_eq    : forall p l, Forall_suffix_until p l l
+  | Forall_sfx_until : forall p s x l,
+      Forall_suffix_until p s l -> p (x::l) ->
+      Forall_suffix_until p s (x::l)
   .
 Definition Forall_nonnil_suffix {A : Type}
   (p : list A -> Prop) (l : list A) : Prop :=
-  Forall_mid_suffix p nil l.
+  Forall_suffix_until p nil l.
 
 (* LTL semantics *)
 
@@ -74,7 +75,7 @@ Definition update
   (theta : Theta) (i : register) (d : D) : Theta :=
   fun (r : register) => if r =? i then d else theta r.
 
-Definition Env := V -> data_word -> Theta -> bool.
+Definition Env := V -> list (data_word * Theta).
 
 Definition models_atom
   (w : data_word) (theta : Theta) (atom : ltl_atom)
@@ -95,40 +96,103 @@ Definition models_phi
   | neg atom => ~ models_atom w theta atom
   end.
 
+(*
+Fixpoint models
+  (u : Env) (w : data_word) (theta : Theta) (psi : ltl)
+  : Prop :=
+  match psi, w with
+  | φ phi, _ => models_phi w theta phi
+  | (↓ r, psi'), h::t => models u w (update theta r (snd h)) psi'
+  | X psi', h::t => models u t theta psi'
+  | psi' ./\ phi,  _ => models u w theta psi' /\ models_phi w theta phi
+  | psi1 .\/ psi2, _ => models u w theta psi1 \/ models u w theta psi2
+  | G phi, _ => Forall_nonnil_suffix (fun t => models_phi t theta phi) w
+  | phi U psi', _ => exists w',
+        models u w' theta psi' /\
+        Forall_mid_suffix (fun t => models_phi t theta phi) w' w
+  | var v, _ => In (w, theta) (u v)
+  | _, nil => False
+  end.
+*)
+
 Inductive models :
-  data_word -> Theta -> Env -> ltl -> Prop :=
+  Env -> data_word -> Theta -> ltl -> Prop :=
   | models_PHI : forall w theta u phi,
       models_phi w theta phi ->
-      models w theta u (φ phi)
+      models u w theta (φ phi)
   | models_STORE : forall h t theta u r psi,
-      models (h::t) (update theta r (snd h)) u psi ->
-      models (h::t) theta u (↓ r, psi)
+      models u (h::t) (update theta r (snd h)) psi ->
+      models u (h::t) theta (↓ r, psi)
   | models_X : forall h t theta u psi,
-      models t theta u psi ->
-      models (h::t) theta u (X psi)
+      models u t theta psi ->
+      models u (h::t) theta (X psi)
   | models_AND : forall w theta u psi phi,
-      models w theta u psi ->
+      models u w theta psi ->
       models_phi w theta phi ->
-      models w theta u (AND psi phi)
+      models u w theta (AND psi phi)
   | models_OR : forall w theta u psi1 psi2,
-      models w theta u psi1 \/
-      models w theta u psi2 ->
-      models w theta u (OR psi1 psi2)
+      models u w theta psi1 \/
+      models u w theta psi2 ->
+      models u w theta (OR psi1 psi2)
   | models_G : forall w theta u phi,
       Forall_nonnil_suffix (fun t => models_phi t theta phi) w ->
-      models w theta u (G phi)
+      models u w theta (G phi)
   | models_U : forall w theta u phi psi,
       (exists w',
-       models w' theta u psi /\
-       Forall_mid_suffix (fun t => models_phi t theta phi) w' w) ->
-      models w theta u (phi U psi)
+       models u w' theta psi /\
+       Forall_suffix_until (fun t => models_phi t theta phi) w' w) ->
+      models u w theta (phi U psi)
   | models_var : forall w theta u v,
-      u v w theta = true ->
-      models w theta u (var v)
+      In (w, theta) (u v) ->
+      models u w theta (var v)
   .
 
 Notation "'(' w ',' theta '|=' u ',' psi ')'"
-  := (models w theta u psi).
+  := (models u w theta psi).
+
+(*
+Scheme Equality for list.
+Scheme Equality for prod.
+Axiom D_eq_dec :
+  forall x y : D, {x = y} + {x <> y}.
+Parameter Sigma_beq : Sigma -> Sigma -> bool.
+Lemma Sigma_eq_dec :
+  forall x y : Sigma, {x = y} + {x <> y}.
+Proof.
+  intros x y.
+  case_eq (Sigma_beq x y).
+  destruct (Sigma_eq_dec x y).
+Definition D_beq (d1 d2 : D) : bool :=
+  if D_eq_dec d1 d2 then true else false.
+Lemma Sigma_D_dec :
+  forall s1 s2 : Sigma * D,
+  {s1 = s2} + {s1 <> s2}.
+Proof.
+  apply prod_eq_dec with (eq_A:=Sigma_beq) (eq_B:=D_beq).
+  - intros x y H.
+  unfold Sigma_beq in H.
+
+  assert (H' := Sigma_dec x y).
+  unfold Sigma_dec in H.
+Lemma data_word_dec :
+  forall w1 w2 : data_word,
+  {w1 = w2} + {w1 <> w2}.
+Proof.
+  eapply list_eq_dec.
+
+Theorem models_dec :
+  forall w theta u psi,
+  {(w, theta |= u, psi)} + {~ (w, theta |= u, psi)}.
+Proof.
+  intros w theta u psi.
+  induction psi.
+  - assert (H: {In (w, theta) (u v)} + {~ In (w, theta) (u v)}).
+  {
+  apply in_dec.
+  eapply prod_eq_dec.
+  apply list_beq.
+  }
+*)
 
 (* Equality of two ltl formulas *)
 
@@ -140,6 +204,19 @@ Axiom ltl_extensionality :
 Axiom Theta_extensionality :
   forall theta1 theta2 : Theta,
     (forall r, theta1 r = theta2 r) -> theta1 = theta2.
+
+(* Equation systems *)
+
+Definition eqn_sys := V -> ltl.  (* the set of equation systems *)
+
+(* The transformation from Env to Env *)
+(*
+Definition F (eqns : eqn_sys) (env : Env) : Env :=
+*)
+
+(* the environment that assigns the empty set to every variable *)
+Definition empty_env : Env :=
+  fun (v : V) => nil.
 
 (* distribution over OR *)
 
@@ -154,21 +231,21 @@ Proof.
   - intros H.
   apply models_OR.
   inversion H
-  as [| | h t th u' psi Hor EQht EQth EQu' EQpsi | | | | |].
+  as [| | h t th u' psi Hor EQu' EQht EQth EQpsi | | | | |].
   clear th EQth u' EQu' psi EQpsi.
   inversion Hor
-  as [| | | | w' th u' p1 p2 Hor' EQw' EQth EQu' [EQp1 EQp2] | | |].
+  as [| | | | w' th u' p1 p2 Hor' EQu' EQw' EQth [EQp1 EQp2] | | |].
   clear w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
   destruct Hor' as [Hor' | Hor'].
   + left. now apply models_X.
   + right. now apply models_X.
   - intros H.
   inversion H
-  as [| | | | w' th u' p1 p2 Hor EQw' EQth EQu' [EQp1 EQp2] | | |].
+  as [| | | | w' th u' p1 p2 Hor EQu' EQw' EQth [EQp1 EQp2] | | |].
   clear w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
   destruct Hor as [Hor | Hor];
   inversion Hor
-  as [| | h t th u' psi Hor' EQht EQth EQu' EQpsi | | | | |];
+  as [| | h t th u' psi Hor' EQu' EQht EQth EQpsi | | | | |];
   clear th EQth u' EQu' psi EQpsi;
   apply models_X;
   apply models_OR.
@@ -186,7 +263,7 @@ Proof.
   split.
   - intros H.
   inversion H
-  as [| | | | | w' th u' p Hsuf EQw' EQth EQu' EQp | |].
+  as [| | | | | w' th u' p Hsuf EQu' EQw' EQth EQp | |].
   clear w' EQw' th EQth u' EQu' p EQp.
   apply models_U.
   exists nil.
@@ -197,11 +274,11 @@ Proof.
   + apply Hsuf.
   - intros H.
   inversion H
-  as [| | | | | | w' th u' p1 p2 Hu EQw' EQth EQu' [EQp1 EQp2]|].
+  as [| | | | | | w' th u' p1 p2 Hu EQu' EQw' EQth [EQp1 EQp2]|].
   clear w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
   destruct Hu as [w' [Hw' Hsuf]].
   inversion Hw'
-  as [w'' th u' p Hend EQw'' EQth EQu' EQp | | | | | | |].
+  as [w'' th u' p Hend EQu' EQw'' EQth EQp | | | | | | |].
   clear w'' EQw'' th EQth u' EQu' p EQp.
   unfold models_phi in Hend.
   unfold models_atom in Hend.
@@ -221,7 +298,7 @@ Proof.
   - intros H.
   apply models_OR.
   inversion H
-  as [| | | | | | w' th u' p1 p2 Hsuf EQw' EQth EQu' [EQp1 EQp2]|].
+  as [| | | | | | w' th u' p1 p2 Hsuf EQu' EQw' EQth [EQp1 EQp2]|].
   clear H w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
   destruct Hsuf as [w' [Hw' Hsuf]].
   destruct w as [| h t].
@@ -240,25 +317,25 @@ Proof.
   now exists w'.
   - intros H.
   inversion H
-  as [| | | | w' th u' p1 p2 Hor EQw' EQu' EQth [EQp1 EQp2] | | |].
+  as [| | | | w' th u' p1 p2 Hor EQu' EQw' EQth [EQp1 EQp2] | | |].
   clear H w' EQw' th u' EQu' EQth p1 EQp1 p2 EQp2.
   apply models_U.
   destruct Hor as [H | H].
   + exists w.
   split; auto.
-  apply Forall_mid_eq.
+  apply Forall_sfx_eq.
   + inversion H
-  as [| | | w' th u' p1 p2 Hw Hp EQw' EQth EQu' [EQp1 EQp2]| | | |].
+  as [| | | w' th u' p1 p2 Hw Hp EQu' EQw' EQth [EQp1 EQp2]| | | |].
   clear w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
   inversion Hw
-  as [| |h t th u' p1 Ht EQht EQth EQu' EQp1| | | | |].
+  as [| |h t th u' p1 Ht EQu' EQht EQth EQp1| | | | |].
   clear th EQth u' EQu' p1 EQp1.
   inversion Ht
-  as [| | | | | | w' th u' p1 p2 Hsuf EQw' EQth EQu' [EQp1 EQp2]|].
+  as [| | | | | | w' th u' p1 p2 Hsuf EQu' EQw' EQth [EQp1 EQp2]|].
   clear H w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
   destruct Hsuf as [w' [Hw' Hsuf]].
   exists w'.
   rewrite <- EQht in Hp.
   split; auto.
-  apply Forall_mid_sfx; auto.
+  apply Forall_sfx_until; auto.
 Qed.
