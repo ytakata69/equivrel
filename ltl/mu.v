@@ -58,7 +58,7 @@ Check ((↓1, X ((φ ~[p 1]) .\/ (φ [p 2]))) ./\ [↑1]).
 (* Forall_suffix_until p "cd" "abcd" <-> p "abcd" /\ p "bcd" *)
 Inductive Forall_suffix_until {A : Type} :
   (list A -> Prop) -> list A -> list A -> Prop :=
-  | Forall_sfx_eq    : forall p l, Forall_suffix_until p l l
+  | Forall_sfx_until_eq : forall p l, Forall_suffix_until p l l
   | Forall_sfx_until : forall p s x l,
       Forall_suffix_until p s l -> p (x::l) ->
       Forall_suffix_until p s (x::l)
@@ -323,7 +323,7 @@ Proof.
   destruct Hor as [H | H].
   + exists w.
   split; auto.
-  apply Forall_sfx_eq.
+  apply Forall_sfx_until_eq.
   + inversion H
   as [| | | w' th u' p1 p2 Hw Hp EQu' EQw' EQth [EQp1 EQp2]| | | |].
   clear w' EQw' th EQth u' EQu' p1 EQp1 p2 EQp2.
@@ -339,3 +339,266 @@ Proof.
   split; auto.
   apply Forall_sfx_until; auto.
 Qed.
+
+Lemma nil_satisfies_U_end :
+  forall (theta : Theta) (u : Env) (phi : ltl_phi),
+  (nil, theta |= u, phi U (φ [END])).
+Proof.
+  intros theta u phi.
+  apply models_U.
+  exists nil.
+  split.
+  - apply models_PHI.
+  unfold models_phi.
+  now unfold models_atom.
+  - apply Forall_sfx_until_eq.
+Qed.
+
+Lemma nil_satisfies_G_any :
+  forall (theta : Theta) (u : Env) (phi : ltl_phi),
+  (nil, theta |= u, G phi).
+Proof.
+  intros theta u phi.
+  rewrite G_equals_phi_U_end.
+  apply nil_satisfies_U_end.
+Qed.
+
+Lemma F_phi_equals_not_G_not_phi_1 :
+  forall (phi : ltl_atom) (theta : Theta) (u : Env),
+  ~ (nil, theta |= u, φ [phi]) ->
+  forall w,
+  (w, theta |= u, [tt] U (φ [phi])) -> ~ (w, theta |= u, G ~[phi]).
+Proof.
+  intros phi theta u Hphi.
+  intros w.
+
+  intros Hf Hg.
+  inversion Hf
+  as [| | | | | | w' th u' phi' psi Hu EQu' EQw' EQth [EQphi' EQpsi]|].
+  clear w' EQw' th EQth u' EQu' phi' EQphi' psi EQpsi.
+  destruct Hu as [w' [Hf1 Hf2]].
+  inversion Hg
+  as [| | | | |w'' th u' phi' Hg' EQu' EQw'' EQth EQphi'| |].
+  clear w'' EQw'' th EQth u' EQu' phi' EQphi'.
+  destruct phi.
+  + (* phi = tt -> ... *)
+  apply Hphi.
+  apply models_PHI.
+  unfold models_phi.
+  now unfold models_atom.
+  + (* phi = ↑ r -> ... *)
+  clear Hf Hg.
+  unfold Forall_nonnil_suffix in Hg'.
+  induction Hf2
+  as [p l | p s x l Hf2 IH Hp].
+  * destruct l as [| x l].
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  unfold models_phi in Hm.
+  now unfold models_atom in Hm.
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  inversion Hg'
+  as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
+  clear p' EQp' s EQs x' EQx' l' EQl'.
+  unfold models_phi in Hm.
+  unfold models_phi in Hml.
+  now apply Hml in Hm.
+  * apply (IH Hf1).
+  inversion Hg'
+  as [| p' s' x' l' Hsl Hml EQp' EQs' [EQx' EQl']].
+  clear p' EQp' s' EQs' x' EQx' l' EQl'.
+  apply Hsl.
+  + (* phi = p a -> ... *)
+  clear Hf Hg.
+  unfold Forall_nonnil_suffix in Hg'.
+  induction Hf2
+  as [p l | p s x l Hf2 IH Hp].
+  * destruct l as [| x l].
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  unfold models_phi in Hm.
+  now unfold models_atom in Hm.
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  inversion Hg'
+  as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
+  clear p' EQp' s EQs x' EQx' l' EQl'.
+  unfold models_phi in Hm.
+  unfold models_phi in Hml.
+  now apply Hml in Hm.
+  * apply (IH Hf1).
+  inversion Hg'
+  as [| p' s' x' l' Hsl Hml EQp' EQs' [EQx' EQl']].
+  clear p' EQp' s' EQs' x' EQx' l' EQl'.
+  apply Hsl.
+  + (* phi = END -> ... *)
+  apply Hphi.
+  apply models_PHI.
+  unfold models_phi.
+  now unfold models_atom.
+Qed.
+
+Lemma F_phi_equals_not_G_not_phi_2 :
+  forall (phi : ltl_atom) (theta : Theta) (u : Env),
+  ~ (nil, theta |= u, φ ~[phi]) ->
+  forall w,
+  (w, theta |= u, [tt] U (φ ~[phi])) -> ~ (w, theta |= u, G [phi]).
+Proof.
+  intros phi theta u Hphi.
+  intros w.
+
+  intros Hf Hg.
+  inversion Hf
+  as [| | | | | | w' th u' phi' psi Hu EQu' EQw' EQth [EQphi' EQpsi]|].
+  clear w' EQw' th EQth u' EQu' phi' EQphi' psi EQpsi.
+  destruct Hu as [w' [Hf1 Hf2]].
+  inversion Hg
+  as [| | | | |w'' th u' phi' Hg' EQu' EQw'' EQth EQphi'| |].
+  clear w'' EQw'' th EQth u' EQu' phi' EQphi'.
+  destruct phi.
+  + (* phi = tt -> ... *)
+  clear Hf Hg.
+  unfold Forall_nonnil_suffix in Hg'.
+  induction Hf2
+  as [p l | p s x l Hf2 IH Hp].
+  * destruct l as [| x l].
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  unfold models_phi in Hm.
+  now unfold models_atom in Hm.
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  inversion Hg'
+  as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
+  clear p' EQp' s EQs x' EQx' l' EQl'.
+  unfold models_phi in Hm.
+  apply Hm.
+  now unfold models_atom.
+  * apply (IH Hf1).
+  inversion Hg'
+  as [| p' s' x' l' Hsl Hml EQp' EQs' [EQx' EQl']].
+  clear p' EQp' s' EQs' x' EQx' l' EQl'.
+  apply Hsl.
+  + (* phi = ↑ r -> ... *)
+  apply Hphi.
+  apply models_PHI.
+  unfold models_phi.
+  now unfold models_atom.
+  + (* phi = p a -> ... *)
+  apply Hphi.
+  apply models_PHI.
+  unfold models_phi.
+  now unfold models_atom.
+  + (* phi = END -> ... *)
+  clear Hf Hg.
+  unfold Forall_nonnil_suffix in Hg'.
+  induction Hf2
+  as [p l | p s x l Hf2 IH Hp].
+  * destruct l as [| x l].
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  unfold models_phi in Hm.
+  now unfold models_atom in Hm.
+  -- inversion Hf1
+  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  inversion Hg'
+  as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
+  clear p' EQp' s EQs x' EQx' l' EQl'.
+  unfold models_phi in Hm.
+  unfold models_phi in Hml.
+  now apply Hm in Hml.
+  * apply (IH Hf1).
+  inversion Hg'
+  as [| p' s' x' l' Hsl Hml EQp' EQs' [EQx' EQl']].
+  clear p' EQp' s' EQs' x' EQx' l' EQl'.
+  apply Hsl.
+Qed.
+
+Lemma F_phi_equals_not_G_not_phi_3 :
+  forall (phi : ltl_atom) (theta : Theta) (u : Env),
+  forall w,
+  ~ (w, theta |= u, [tt] U (φ [phi])) -> (w, theta |= u, G ~[phi]).
+Proof.
+  intros phi theta u.
+  intros w.
+  intros Hnf.
+  apply models_G.
+  unfold Forall_nonnil_suffix.
+  induction w as [| x l IH].
+  - apply Forall_sfx_until_eq.
+  - apply Forall_sfx_until.
+  + apply IH.
+  intros Hl.
+  apply Hnf.
+  inversion Hl
+  as [| | | | | | w' th u' phi' psi Hu EQu' EQw' EQth [EQphi' EQpsi]|].
+  clear w' EQw' th EQth u' EQu' phi' EQphi' psi EQpsi.
+  destruct Hu as [w' [Hf1 Hf2]].
+  apply models_U.
+  exists w'.
+  split; auto.
+  apply Forall_sfx_until; auto.
+  unfold models_phi.
+  now unfold models_atom.
+  + unfold models_phi.
+  intros Hxl.
+  apply Hnf.
+  apply models_U.
+  exists (x :: l).
+  split.
+  * apply models_PHI.
+  apply Hxl.
+  * apply Forall_sfx_until_eq.
+Qed.
+
+Definition classic := forall P, ~~P -> P.
+
+Lemma F_phi_equals_not_G_not_phi_4 :
+  classic ->
+  forall (phi : ltl_atom) (theta : Theta) (u : Env),
+  forall w,
+  ~ (w, theta |= u, [tt] U (φ ~[phi])) -> (w, theta |= u, G [phi]).
+Proof.
+  intros classic.
+  intros phi theta u.
+  intros w.
+  intros Hnf.
+  apply models_G.
+  unfold Forall_nonnil_suffix.
+  induction w as [| x l IH].
+  - apply Forall_sfx_until_eq.
+  - apply Forall_sfx_until.
+  + apply IH.
+  intros Hl.
+  apply Hnf.
+  inversion Hl
+  as [| | | | | | w' th u' phi' psi Hu EQu' EQw' EQth [EQphi' EQpsi]|].
+  clear w' EQw' th EQth u' EQu' phi' EQphi' psi EQpsi.
+  destruct Hu as [w' [Hf1 Hf2]].
+  apply models_U.
+  exists w'.
+  split; auto.
+  apply Forall_sfx_until; auto.
+  unfold models_phi.
+  now unfold models_atom.
+  + unfold models_phi.
+  apply classic.
+  intros Hnxl.
+  apply Hnf.
+  apply models_U.
+  exists (x :: l).
+  split.
+  * apply models_PHI.
+  apply Hnxl.
+  * apply Forall_sfx_until_eq.
+Qed.
+
