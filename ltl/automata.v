@@ -118,71 +118,92 @@ Proof.
   unfold lfpF.
   induction ell as [| l IHl].
   - (* ell = 0 -> ... *)
-  intros w.
-  destruct w as [| a w].
-  + (* w = nil -> ... *)
-  intros v theta Hw.
-  inversion Hw
-  as [w th u phi Hmo EQu EQw EQth EQphi
-     | | 
-     | w th u psi phi Hpsi Hmo EQu EQw EQth EQpsi
-     | w th u psi1 psi2 Hmo EQu EQw EQth EQpsi
-     | w th u psi Hmo EQu EQw EQth EQpsi
-     | w th u phi psi Hmo EQu EQw EQth EQpsi
-     | w th u v' Hmo EQu EQw EQth EQpsi].
-  * (* sigma v = φ phi -> ... *)
-  destruct phi.
-  -- (* sigma v = φ [l] -> ... *)
-  unfold models_phi in Hmo.
-  destruct l.
-  ++ (* sigma v = φ [tt] -> ... *)
-  exists theta.
-  exists (φ [tt]).
-  split.
-  ** apply finalA_tt.
-  ** apply moveA_star_ref.
-  ++ (* sigma v = φ [↑ r] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ [p a] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ [END] -> ... *)
-  exists theta.
-  exists (φ [END]).
-  split.
-  ** apply finalA_END.
-  ** apply moveA_star_ref.
-  -- (* sigma v = φ ~[l] -> ... *)
-  unfold models_phi in Hmo.
-  destruct l.
-  ++ (* sigma v = φ ~[tt] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ ~[↑ r] -> ... *)
-  exists theta.
-  exists (φ ~[↑ r]).
-  split.
-  ** apply finalA_not_MATCH.
-  ** apply moveA_star_ref.
-  ++ (* sigma v = φ ~[p a] -> ... *)
-  exists theta.
-  exists (φ ~[p a]).
-  split.
-  ** apply finalA_not_p.
-  ** apply moveA_star_ref.
-  ++ (* sigma v = φ ~[END] -> ... *)
-  now unfold models_atom in Hmo.
-  * (* sigma v = psi ./\ phi -> ... *)
+  intros w v theta Hw.
   assert (Hra' := Hra v).
+  inversion Hw
+  as [w' th u phi Hmo EQu EQw' EQth EQphi
+     | h t th u r psi Hmo EQu [EQh EQt] EQth EQpsi
+     | h t th u psi Hmo EQu [EQh EQt] EQth EQpsi 
+     | w' th u psi phi Hpsi Hmo EQu EQw' EQth EQpsi
+     | w' th u psi1 psi2 Hmo EQu EQw' EQth EQpsi
+     | w' th u psi Hmo EQu EQw' EQth EQpsi
+     | w' th u phi psi Hmo EQu EQw' EQth EQpsi
+     | w' th u v' Hmo EQu EQw' EQth EQpsi].
+  * (* sigma v = φ phi -> ... *)
+  exists theta.
+  destruct w as [| a w].
+  -- (* w = nil -> ... *)
+  exists (φ phi).
+  destruct phi as [l0 | l0].
+  ++ (* sigma v = φ [l0] -> ... *)
+  destruct l0;
+  split;
+  try apply moveA_star_ref;
+  try now unfold models_atom in Hmo;
+  try apply finalA_tt;
+  try apply finalA_END.
+  ++ (* sigma v = φ ~[l0] -> ... *)
+  unfold models_phi in Hmo.
+  destruct l0;
+  split;
+  try apply moveA_star_ref;
+  try now unfold models_atom in Hmo;
+  try apply finalA_not_MATCH;
+  try apply finalA_not_p.
+  -- (* w' = a :: w -> ... *)
+  exists (φ [tt]).
+  destruct phi as [l0 | l0].
+  ++ (* sigma v = φ [l0] -> ... *)
+  remember l0 as l1.
+  destruct l0;
+  split; try apply finalA_tt;
+  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
+  try apply tt_loop_exists;
+  apply moveA_not_update with (phi := [l1]);
+  try apply Hmo;
+  apply ruleA_PHI.
+  ++ (* sigma v = φ ~[l] -> ... *)
+  remember l0 as l1.
+  destruct l0;
+  split; try apply finalA_tt;
+  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
+  try apply tt_loop_exists;
+  apply moveA_not_update with (phi := ~[l1]);
+  try apply Hmo;
+  apply ruleA_PHI.
+
+  * (* sigma v = ↓ r, psi -> ... *)
+  rewrite <- EQpsi in Hra';
+  inversion Hra'.
+  * (* sigma v = X psi -> ... *)
+  rewrite <- EQpsi in Hra';
+  inversion Hra'.
+
+  * (* sigma v = psi ./\ phi -> ... *)
   rewrite <- EQpsi in Hra'.
   inversion Hra'
   as [| v0 phi0 [EQv0 EQphi0]| r v0 phi0 [EQv0 EQphi0]|].
   -- (* sigma v = X (var v0) ./\ phi -> ... *)
   rewrite <- EQv0 in Hpsi.
-  inversion Hpsi.
+  inversion Hpsi
+  as [| | h t th' u' psi' Hmo' EQu' [EQh EQt] EQth' EQpsi'| | | | |].
+  clear th' EQth' u' EQu' psi' EQpsi'.
+  inversion Hmo'
+  as [| | | | | | |w'' th' u' v1 Hf EQu' EQw'' EQth' EQv1].
+  now unfold Fpow_emp in Hf.
   -- (* sigma v = (↓ r, X (var v0)) ./\ phi -> ... *)
   rewrite <- EQv0 in Hpsi.
-  inversion Hpsi.
+  inversion Hpsi
+  as [| h t th' u' r' psi' Hmo' EQu' [EQh EQt] EQth' [EQr' EQpsi'] | | | | | |].
+  clear th' EQth' u' EQu' r' EQr' psi' EQpsi'.
+  inversion Hmo'
+  as [| | h' t' th' u' psi' Hmo'' EQu' [EQh' EQt'] EQth' EQpsi'| | | | |].
+  clear h' EQh' t' EQt' th' EQth' u' EQu' psi' EQpsi'.
+  inversion Hmo''
+  as [| | | | | | |w'' th' u' v1 Hf EQu' EQw'' EQth' EQv1].
+  now unfold Fpow_emp in Hf.
+
   * (* sigma v = psi1 .\/ psi2 -> ... *)
-  assert (Hra' := Hra v).
   rewrite <- EQpsi in Hra'.
   inversion Hra' as [v1 v2 [EQpsi1 EQpsi2]| | |].
   (* sigma v = var v1 .\/ var v2 -> ... *)
@@ -192,25 +213,25 @@ Proof.
   unfold Fpow in Hmo.
   destruct Hmo as [Hmo | Hmo].
   -- (* (nil, theta |= empty_env, var v1) -> ... *)
-  inversion Hmo as [| | | | | | |w' th' u' v' H].
+  inversion Hmo as [| | | | | | |w'' th' u' v' H].
   now unfold empty_env in H.
   -- (* (nil, theta |= empty_env, var v2) -> ... *)
-  inversion Hmo as [| | | | | | |w' th' u' v' H].
+  inversion Hmo as [| | | | | | |w'' th' u' v' H].
   now unfold empty_env in H.
+
   * (* sigma v = G psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
   * (* sigma v = phi U psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
   * (* sigma v = var v' -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
-  + (* w = a::w -> ... *)
-  intros v theta Hw.
+
+  - (* inductive step on ell *)
+  intros w v theta Hw.
+  assert (Hra' := Hra v).
   inversion Hw
   as [w' th u phi Hmo EQu EQw' EQth EQphi
      | h t th u r psi Hmo EQu [EQh EQt] EQth EQpsi
@@ -221,312 +242,74 @@ Proof.
      | w' th u phi psi Hmo EQu EQw' EQth EQpsi
      | w' th u v' Hmo EQu EQw' EQth EQpsi].
   * (* sigma v = φ phi -> ... *)
-  destruct phi.
-  -- (* sigma v = φ [l] -> ... *)
-  unfold models_phi in Hmo.
   exists theta.
-  exists (φ [tt]).
-  destruct l;
-  split; try apply finalA_tt.
-  ++ (* sigma v = φ [tt] -> ... *)
-  apply tt_loop_exists.
-  ++ (* sigma v = φ [↑ r] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := [↑ r]); auto.
-  apply ruleA_PHI.
-  ++ (* sigma v = φ [p a] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := [p a0]); auto.
-  apply ruleA_PHI.
-  ++ (* sigma v = φ [END] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := [END]); auto.
-  apply ruleA_PHI.
-  -- (* sigma v = φ ~[l] -> ... *)
+  destruct w as [| a w].
+  -- (* w = nil -> ... *)
+  exists (φ phi).
+  destruct phi as [l0 | l0].
+  ++ (* sigma v = φ [l0] -> ... *)
+  destruct l0;
+  split;
+  try apply moveA_star_ref;
+  try now unfold models_atom in Hmo;
+  try apply finalA_tt;
+  try apply finalA_END.
+  ++ (* sigma v = φ ~[l0] -> ... *)
   unfold models_phi in Hmo.
-  exists theta.
+  destruct l0;
+  split;
+  try apply moveA_star_ref;
+  try now unfold models_atom in Hmo;
+  try apply finalA_not_MATCH;
+  try apply finalA_not_p.
+  -- (* w' = a :: w -> ... *)
   exists (φ [tt]).
-  destruct l;
-  split; try apply finalA_tt.
-  ++ (* sigma v = φ ~[tt] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ ~[↑ r] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := ~[↑ r]); auto.
+  destruct phi as [l0 | l0].
+  ++ (* sigma v = φ [l0] -> ... *)
+  remember l0 as l1.
+  destruct l0;
+  split; try apply finalA_tt;
+  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
+  try apply tt_loop_exists;
+  apply moveA_not_update with (phi := [l1]);
+  try apply Hmo;
   apply ruleA_PHI.
-  ++ (* sigma v = φ ~[p a0] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := ~[p a0]); auto.
+  ++ (* sigma v = φ ~[l] -> ... *)
+  remember l0 as l1.
+  destruct l0;
+  split; try apply finalA_tt;
+  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
+  try apply tt_loop_exists;
+  apply moveA_not_update with (phi := ~[l1]);
+  try apply Hmo;
   apply ruleA_PHI.
-  ++ (* sigma v = φ ~[END] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := ~[END]); auto.
-  apply ruleA_PHI.
+
   * (* sigma v = ↓ r, psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
   * (* sigma v = X psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
+
   * (* sigma v = psi ./\ phi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'
-  as [| v0 phi0 [EQv0 EQphi0]| r v0 phi0 [EQv0 EQphi0]|];
-  clear w' EQw' u EQu th EQth phi0 EQphi0.
-  -- (* sigma v = X (var v0) ./\ phi -> ... *)
-  rewrite <- EQv0 in Hpsi.
-  inversion Hpsi
-  as [| | h t th' u' psi' Hmo' EQu' [EQh EQt] EQth' EQpsi'| | | | |].
-  clear h EQh t th' EQth' EQt u' EQu' psi' EQpsi'.
-  inversion Hmo'
-  as [| | | | | | |w' th' u v1 Hf EQu EQw' EQth' EQv1].
-  now unfold Fpow_emp in Hf.
-  -- (* sigma v = (↓ r, X (var v0)) ./\ phi -> ... *)
-  rewrite <- EQv0 in Hpsi.
-  inversion Hpsi
-  as [| h t th' u' r' psi' Hmo' EQu' [EQh EQt] EQth' [EQr' EQpsi'] | | | | | |].
-  clear h EQh t th' EQth' EQt u' EQu' r' EQr' psi' EQpsi'.
-  inversion Hmo'
-  as [| | h t th' u' psi' Hmo'' EQu' [EQh EQt] EQth' EQpsi'| | | | |].
-  clear h EQh t th' EQth' EQt u' EQu' psi' EQpsi'.
-  inversion Hmo''
-  as [| | | | | | |w' th' u v1 Hf EQu EQw' EQth' EQv1].
-  now unfold Fpow_emp in Hf.
-  * (* sigma v = psi1 .\/ psi2 -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra' as [v1 v2 [EQpsi1 EQpsi2]| | |].
-  (* sigma v = var v1 .\/ var v2 -> ... *)
-  rewrite <- EQpsi1 in Hmo.
-  rewrite <- EQpsi2 in Hmo.
-  unfold Fpow_emp in Hmo.
-  unfold Fpow in Hmo.
-  clear w' EQw' th EQth u EQu.
-  destruct Hmo as [Hmo | Hmo].
-  -- (* (a::w, theta |= empty_env, var v1) -> ... *)
-  inversion Hmo as [| | | | | | |w' th' u' v' H].
-  now unfold empty_env in H.
-  -- (* (a::w, theta |= empty_env, var v2) -> ... *)
-  inversion Hmo as [| | | | | | |w' th' u' v' H].
-  now unfold empty_env in H.
-  * (* sigma v = G psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  * (* sigma v = phi U psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  * (* sigma v = var v' -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  - (* inductive step on ell *)
-  intros w.
-  destruct w as [| a w].
-  + (* w = nil -> ... *)
-  intros v theta Hw.
-  inversion Hw
-  as [w th u phi Hmo EQu EQw EQth EQphi
-     | | 
-     | w th u psi phi Hpsi Hmo EQu EQw EQth EQpsi
-     | w th u psi1 psi2 Hmo EQu EQw EQth EQpsi
-     | w th u psi Hmo EQu EQw EQth EQpsi
-     | w th u phi psi Hmo EQu EQw EQth EQpsi
-     | w th u v' Hmo EQu EQw EQth EQpsi].
-  * (* sigma v = φ phi -> ... *)
-  destruct phi.
-  -- (* sigma v = φ [l0] -> ... *)
-  unfold models_phi in Hmo.
-  destruct l0.
-  ++ (* sigma v = φ [tt] -> ... *)
-  exists theta.
-  exists (φ [tt]).
-  split.
-  ** apply finalA_tt.
-  ** apply moveA_star_ref.
-  ++ (* sigma v = φ [↑ r] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ [p a] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ [END] -> ... *)
-  exists theta.
-  exists (φ [END]).
-  split.
-  ** apply finalA_END.
-  ** apply moveA_star_ref.
-  -- (* sigma v = φ ~[l0] -> ... *)
-  unfold models_phi in Hmo.
-  destruct l0.
-  ++ (* sigma v = φ ~[tt] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ ~[↑ r] -> ... *)
-  exists theta.
-  exists (φ ~[↑ r]).
-  split.
-  ** apply finalA_not_MATCH.
-  ** apply moveA_star_ref.
-  ++ (* sigma v = φ ~[p a] -> ... *)
-  exists theta.
-  exists (φ ~[p a]).
-  split.
-  ** apply finalA_not_p.
-  ** apply moveA_star_ref.
-  ++ (* sigma v = φ ~[END] -> ... *)
-  now unfold models_atom in Hmo.
-  * (* sigma v = psi ./\ phi -> ... *)
-  assert (Hra' := Hra v).
   rewrite <- EQpsi in Hra'.
   inversion Hra'
   as [| v0 phi0 [EQv0 EQphi0]| r v0 phi0 [EQv0 EQphi0]|].
   -- (* sigma v = X (var v0) ./\ phi -> ... *)
   rewrite <- EQv0 in Hpsi.
-  inversion Hpsi.
-  -- (* sigma v = (↓ r, X (var v0)) ./\ phi -> ... *)
-  rewrite <- EQv0 in Hpsi.
-  inversion Hpsi.
-  * (* sigma v = psi1 .\/ psi2 -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra' as [v1 v2 [EQpsi1 EQpsi2]| | |].
-  (* sigma v = var v1 .\/ var v2 -> ... *)
-  rewrite <- EQpsi1 in Hmo.
-  rewrite <- EQpsi2 in Hmo.
-  unfold Fpow_emp in Hmo.
-  unfold Fpow in Hmo.
-  destruct Hmo as [Hmo | Hmo].
-  -- (* (nil, theta |= Fpow sigma (S l), var v1) -> ... *)
-  inversion Hmo as [| | | | | | |w' th' u' v' H EQu' EQw' EQth' EQv'].
-  clear w' EQw' th' EQth' u' EQu' v' EQv'.
-  assert (IHl' := IHl nil v1 theta H).
-  destruct IHl' as [theta' [qF [Hfin Hmv]]].
-  exists theta'.
-  exists qF.
-  split; auto.
-  apply (moveA_star_trans _ _ (sigma v1, theta, nil));
-  auto.
-  apply moveA_epsilon.
-  apply ruleA_OR_left.
-  -- (* (nil, theta |= Fpow sigma (S l), var v2) -> ... *)
-  inversion Hmo as [| | | | | | |w' th' u' v' H EQu' EQw' EQth' EQv'].
-  clear w' EQw' th' EQth' u' EQu' v' EQv'.
-  assert (IHl' := IHl nil v2 theta H).
-  destruct IHl' as [theta' [qF [Hfin Hmv]]].
-  exists theta'.
-  exists qF.
-  split; auto.
-  apply (moveA_star_trans _ _ (sigma v2, theta, nil));
-  auto.
-  apply moveA_epsilon.
-  apply ruleA_OR_right.
-  * (* sigma v = G psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  * (* sigma v = phi U psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  * (* sigma v = var v' -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  + (* w = a::w -> ... *)
-  intros v theta Hw.
-  inversion Hw
-  as [w' th u phi Hmo EQu EQw' EQth EQphi
-     | h t th u r psi Hmo EQu [EQh EQt] EQth EQpsi
-     | h t th u psi Hmo EQu [EQh EQt] EQth EQpsi 
-     | w' th u psi phi Hpsi Hmo EQu EQw' EQth EQpsi
-     | w' th u psi1 psi2 Hmo EQu EQw' EQth EQpsi
-     | w' th u psi Hmo EQu EQw' EQth EQpsi
-     | w' th u phi psi Hmo EQu EQw' EQth EQpsi
-     | w' th u v' Hmo EQu EQw' EQth EQpsi].
-  * (* sigma v = φ phi -> ... *)
-  destruct phi.
-  -- (* sigma v = φ [l0] -> ... *)
-  unfold models_phi in Hmo.
-  exists theta.
-  exists (φ [tt]).
-  destruct l0;
-  split; try apply finalA_tt.
-  ++ (* sigma v = φ [tt] -> ... *)
-  apply tt_loop_exists.
-  ++ (* sigma v = φ [↑ r] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := [↑ r]); auto.
-  apply ruleA_PHI.
-  ++ (* sigma v = φ [p a] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := [p a0]); auto.
-  apply ruleA_PHI.
-  ++ (* sigma v = φ [END] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := [END]); auto.
-  apply ruleA_PHI.
-  -- (* sigma v = φ ~[l0] -> ... *)
-  unfold models_phi in Hmo.
-  exists theta.
-  exists (φ [tt]).
-  destruct l0;
-  split; try apply finalA_tt.
-  ++ (* sigma v = φ ~[tt] -> ... *)
-  now unfold models_atom in Hmo.
-  ++ (* sigma v = φ ~[↑ r] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := ~[↑ r]); auto.
-  apply ruleA_PHI.
-  ++ (* sigma v = φ ~[p a0] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := ~[p a0]); auto.
-  apply ruleA_PHI.
-  ++ (* sigma v = φ ~[END] -> ... *)
-  apply (moveA_star_trans _ _ (φ [tt], theta, w));
-  try apply tt_loop_exists.
-  apply moveA_not_update with (phi := ~[END]); auto.
-  apply ruleA_PHI.
-  * (* sigma v = ↓ r, psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  * (* sigma v = X psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'.
-  * (* sigma v = psi ./\ phi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
-  inversion Hra'
-  as [| v0 phi0 [EQv0 EQphi0]| r v0 phi0 [EQv0 EQphi0]|];
-  clear w' EQw' u EQu th EQth phi0 EQphi0.
-  -- (* sigma v = X (var v0) ./\ phi -> ... *)
-  rewrite <- EQv0 in Hpsi.
   inversion Hpsi
   as [| | h t th' u' psi' Hmo' EQu' [EQh EQt] EQth' EQpsi'| | | | |].
-  clear h EQh t th' EQth' EQt u' EQu' psi' EQpsi'.
+  clear th' EQth' u' EQu' psi' EQpsi'.
+  rewrite<- EQh in Hmo.
   inversion Hmo'
-  as [| | | | | | |w' th' u v1 Hf EQu EQw' EQth' EQv1].
-  clear w' EQw' th' EQth' u EQu v1 EQv1.
-  assert (IHl' := IHl w v0 theta Hf).
+  as [| | | | | | |w'' th' u' v1 Hf EQu' EQw'' EQth' EQv1].
+  clear w'' EQw'' th' EQth' u' EQu' v1 EQv1.
+  assert (IHl' := IHl t v0 theta Hf).
   destruct IHl' as [theta' [qF [Hfin Hmv]]].
   exists theta'.
   exists qF.
   split; auto.
-  apply (moveA_star_trans _ _ (sigma v0, theta, w));
+  apply (moveA_star_trans _ _ (sigma v0, theta, t));
   auto.
   apply moveA_not_update with (phi := phi);
   auto.
@@ -535,24 +318,25 @@ Proof.
   rewrite <- EQv0 in Hpsi.
   inversion Hpsi
   as [| h t th' u' r' psi' Hmo' EQu' [EQh EQt] EQth' [EQr' EQpsi'] | | | | | |].
-  clear h EQh t th' EQth' EQt u' EQu' r' EQr' psi' EQpsi'.
+  clear th' EQth' u' EQu' r' EQr' psi' EQpsi'.
+  rewrite<- EQh in Hmo.
   inversion Hmo'
-  as [| | h t th' u' psi' Hmo'' EQu' [EQh EQt] EQth' EQpsi'| | | | |].
-  clear h EQh t th' EQth' EQt u' EQu' psi' EQpsi'.
+  as [| | h' t' th' u' psi' Hmo'' EQu' [EQh' EQt'] EQth' EQpsi'| | | | |].
+  clear h' EQh' t' EQt' th' EQth' u' EQu' psi' EQpsi'.
   inversion Hmo''
-  as [| | | | | | |w' th' u v1 Hf EQu EQw' EQth' EQv1].
-  assert (IHl' := IHl w v0 (update theta r (snd a)) Hf).
+  as [| | | | | | |w'' th' u' v1 Hf EQu' EQw'' EQth' EQv1].
+  assert (IHl' := IHl t v0 (update theta r (snd h)) Hf).
   destruct IHl' as [theta' [qF [Hfin Hmv]]].
   exists theta'.
   exists qF.
   split; auto.
-  apply (moveA_star_trans _ _ (sigma v0, (update theta r (snd a)), w));
+  apply (moveA_star_trans _ _ (sigma v0, (update theta r (snd h)), t));
   auto.
   apply moveA_update with (phi := phi);
   auto.
   apply ruleA_STORE_X.
+
   * (* sigma v = psi1 .\/ psi2 -> ... *)
-  assert (Hra' := Hra v).
   rewrite <- EQpsi in Hra'.
   inversion Hra' as [v1 v2 [EQpsi1 EQpsi2]| | |].
   (* sigma v = var v1 .\/ var v2 -> ... *)
@@ -562,41 +346,39 @@ Proof.
   unfold Fpow in Hmo.
   clear w' EQw' th EQth u EQu.
   destruct Hmo as [Hmo | Hmo].
-  -- (* (a::w, theta |= Fpow sigma (S l), var v1) -> ... *)
+  -- (* (w, theta |= Fpow sigma (S l), var v1) -> ... *)
   inversion Hmo as [| | | | | | |w' th' u' v' H EQu' EQw' EQth' EQv'].
   clear w' EQw' th' EQth' u' EQu' v' EQv'.
-  assert (IHl' := IHl (a::w) v1 theta H).
+  assert (IHl' := IHl w v1 theta H).
   destruct IHl' as [theta' [qF [Hfin Hmv]]].
   exists theta'.
   exists qF.
   split; auto.
-  apply (moveA_star_trans _ _ (sigma v1, theta, a::w));
+  apply (moveA_star_trans _ _ (sigma v1, theta, w));
   auto.
   apply moveA_epsilon.
   apply ruleA_OR_left.
-  -- (* (a::w, theta |= Fpow sigma (S l), var v2) -> ... *)
+  -- (* (w, theta |= Fpow sigma (S l), var v2) -> ... *)
   inversion Hmo as [| | | | | | |w' th' u' v' H EQu' EQw' EQth' EQv'].
   clear w' EQw' th' EQth' u' EQu' v' EQv'.
-  assert (IHl' := IHl (a::w) v2 theta H).
+  assert (IHl' := IHl w v2 theta H).
   destruct IHl' as [theta' [qF [Hfin Hmv]]].
   exists theta'.
   exists qF.
   split; auto.
-  apply (moveA_star_trans _ _ (sigma v2, theta, a::w));
+  apply (moveA_star_trans _ _ (sigma v2, theta, w));
   auto.
   apply moveA_epsilon.
   apply ruleA_OR_right.
+
   * (* sigma v = G psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
   * (* sigma v = phi U psi -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
   * (* sigma v = var v' -> ... *)
-  assert (Hra' := Hra v).
-  rewrite <- EQpsi in Hra'.
+  rewrite <- EQpsi in Hra';
   inversion Hra'.
 Qed.
 
