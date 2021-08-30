@@ -98,19 +98,26 @@ Proof.
   + trivial.
 Qed.
 
+Section Converting_Equations_into_RA.
+
+Variable sigma : eqn_sys.
+Hypothesis Hra :
+  forall v : V, ra_ltl (sigma v).
+
+Variable ell : nat.
+Definition lfpF := Fpow_emp sigma ell.
+Hypothesis HlfpF : lfpF = F sigma lfpF.
+
 Theorem sigma_to_A_1 :
-  forall sigma : eqn_sys,
-  (forall v : V, ra_ltl (sigma v)) ->
-  forall l w v theta,
-  (w, theta |= Fpow_emp sigma l, sigma v) ->
+  forall w v theta,
+  (w, theta |= lfpF, sigma v) ->
   exists theta' qF,
   finalA qF /\
   moveA_star sigma (sigma v, theta, w) (qF, theta', nil).
 Proof.
-  intros sigma Hra.
-  intros l.
-  induction l.
-  - (* l = 0 -> ... *)
+  unfold lfpF.
+  induction ell as [| l IHl].
+  - (* ell = 0 -> ... *)
   intros w.
   destruct w as [| a w].
   + (* w = nil -> ... *)
@@ -323,7 +330,7 @@ Proof.
   assert (Hra' := Hra v).
   rewrite <- EQpsi in Hra'.
   inversion Hra'.
-  - (* inductive step on l *)
+  - (* inductive step on ell *)
   intros w.
   destruct w as [| a w].
   + (* w = nil -> ... *)
@@ -592,3 +599,122 @@ Proof.
   rewrite <- EQpsi in Hra'.
   inversion Hra'.
 Qed.
+
+Theorem sigma_to_A_2 :
+  forall w v theta,
+  (exists theta' qF,
+   finalA qF /\
+   moveA_star sigma (sigma v, theta, w) (qF, theta', nil)) ->
+  (w, theta |= lfpF, sigma v).
+Proof.
+  intros w v theta.
+  intros [theta' [qF [Hfin Hmo]]].
+  remember (sigma v, theta, w) as x.
+  remember (qF, theta', nil) as y.
+  generalize dependent theta.
+  generalize dependent v.
+  generalize dependent w.
+  induction Hmo as [| c1 c2 c3 Hmo1 Hmo IH];
+  intros w v theta Heqx.
+  - (* qF = sigma v -> ... *)
+  rewrite Heqy in Heqx.
+  injection Heqx;
+  intros EQw EQtheta' EQqF.
+  rewrite EQqF in Hfin.
+  rewrite<- EQw.
+  inversion Hfin; now apply models_PHI.
+  - (* inductive step *)
+  assert (IH' := IH Heqy).
+  clear IH.
+  rewrite Heqx in Hmo1.
+  assert (Hra' := Hra v).
+  inversion Hra'
+  as [v1 v2 Hpsi| v1 phi Hpsi | r v1 phi Hpsi| phi Hpsi].
+  + (* sigma v = var v1 .\/ var v2 -> ... *)
+  apply models_OR.
+  rewrite<- Hpsi in Hmo1.
+  inversion Hmo1
+  as [q1 q2 th w' Hru [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi th h t Hru
+     |q1 q2 phi r th h t Hru ].
+  * clear q1 EQq1 th EQth w' EQw'.
+  inversion Hru
+  as [|v1' v2' [EQv1' EQv2'] EQeps EQreg EQq2'
+      |v1' v2' [EQv1' EQv2'] EQeps EQreg EQq2'| | |].
+  -- (* q2 = sigma v1 -> ... *)
+  clear v1' EQv1' v2' EQv2' EQeps EQreg.
+  rewrite<- EQq2' in EQq2; clear EQq2'.
+  symmetry in EQq2.
+  left.
+  apply models_var.
+  rewrite HlfpF.
+  unfold F.
+  now apply IH'.
+  -- (* q2 = sigma v2 -> ... *)
+  clear v1' EQv1' v2' EQv2' EQeps EQreg.
+  rewrite<- EQq2' in EQq2; clear EQq2'.
+  symmetry in EQq2.
+  right.
+  apply models_var.
+  rewrite HlfpF.
+  unfold F.
+  now apply IH'.
+  * inversion Hru.
+  * inversion Hru.
+  + (* sigma v = X (var v1) ./\ phi -> ... *)
+  rewrite<- Hpsi in Hmo1.
+  inversion Hmo1
+  as [q1 q2 th w' Hru [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi' th h t Hru Hphi [EQq1 EQth EQht] EQq2
+     |q1 q2 phi' r th h t Hru ].
+  * inversion Hru.
+  * clear q1 EQq1 th EQth.
+  inversion Hru
+  as [| | | v1' phi'' [EQv1' EQphi''] EQphi EQreg EQq2'| |].
+  clear v1' EQv1' phi'' EQphi'' EQreg.
+  rewrite<- EQq2' in EQq2; clear EQq2'.
+  symmetry in EQq2.
+  apply models_AND; auto.
+  apply models_X.
+  apply models_var.
+  rewrite HlfpF.
+  unfold F.
+  now apply IH'.
+  * inversion Hru.
+  + (* sigma v = (↓ r, X (var v1)) ./\ phi -> ... *)
+  rewrite<- Hpsi in Hmo1.
+  inversion Hmo1
+  as [q1 q2 th w' Hru [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi' th h t Hru Hphi [EQq1 EQth EQht] EQq2
+     |q1 q2 phi' r' th h t Hru Hphi [EQq1 EQth EQht] EQq2].
+  * inversion Hru.
+  * inversion Hru.
+  * clear q1 EQq1 th EQth.
+  inversion Hru
+  as [| | | |r'' v1' phi'' [EQr'' EQv1' EQphi''] EQphi EQr EQq2'|].
+  clear r'' EQr'' v1' EQv1' phi'' EQphi''.
+  rewrite<- EQq2' in EQq2; clear EQq2'.
+  symmetry in EQq2.
+  apply models_AND; auto.
+  apply models_STORE.
+  apply models_X.
+  apply models_var.
+  rewrite HlfpF.
+  unfold F.
+  now apply IH'.
+  + (* sigma v = φ phi -> ... *)
+  rewrite<- Hpsi in Hmo1.
+  inversion Hmo1
+  as [q1 q2 th w' Hru [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi' th h t Hru Hphi [EQq1 EQth EQht] EQq2
+     |q1 q2 phi' r' th h t Hru Hphi [EQq1 EQth EQht] EQq2].
+  * inversion Hru.
+  * clear q1 EQq1 th EQth.
+  inversion Hru
+  as [phi'' EQphi'' EQphi EQreg EQq2'| | | |
+     |EQphi EQphi' EQreg EQq2'];
+  now apply models_PHI.
+  * inversion Hru.
+Qed.
+
+End Converting_Equations_into_RA.
