@@ -41,8 +41,6 @@ Inductive ruleA (sigma : eqn_sys)
   | ruleA_STORE_X :
     forall r (v : V) (phi : ltl_phi),
     ruleA sigma ((↓ r, X (var v)) ./\ phi) (Σφ phi) (reg r) (sigma v)
-  | ruleA_NOTEND :
-    ruleA sigma (φ ~[END]) (Σφ [tt]) reg_empty (φ [tt])
   .
 
 Definition Config := (ltl * Theta * data_word)%type.
@@ -422,7 +420,7 @@ Proof.
   * clear q1 EQq1 th EQth w' EQw'.
   inversion Hru
   as [|v1' v2' [EQv1' EQv2'] EQeps EQreg EQq2'
-      |v1' v2' [EQv1' EQv2'] EQeps EQreg EQq2'| | |].
+      |v1' v2' [EQv1' EQv2'] EQeps EQreg EQq2'| |].
   -- (* q2 = sigma v1 -> ... *)
   clear v1' EQv1' v2' EQv2' EQeps EQreg.
   rewrite<- EQq2' in EQq2; clear EQq2'.
@@ -452,7 +450,7 @@ Proof.
   * inversion Hru.
   * clear q1 EQq1 th EQth.
   inversion Hru
-  as [| | | v1' phi'' [EQv1' EQphi''] EQphi EQreg EQq2'| |].
+  as [| | | v1' phi'' [EQv1' EQphi''] EQphi EQreg EQq2'|].
   clear v1' EQv1' phi'' EQphi'' EQreg.
   rewrite<- EQq2' in EQq2; clear EQq2'.
   symmetry in EQq2.
@@ -473,7 +471,7 @@ Proof.
   * inversion Hru.
   * clear q1 EQq1 th EQth.
   inversion Hru
-  as [| | | |r'' v1' phi'' [EQr'' EQv1' EQphi''] EQphi EQr EQq2'|].
+  as [| | | |r'' v1' phi'' [EQr'' EQv1' EQphi''] EQphi EQr EQq2'].
   clear r'' EQr'' v1' EQv1' phi'' EQphi''.
   rewrite<- EQq2' in EQq2; clear EQq2'.
   symmetry in EQq2.
@@ -493,8 +491,7 @@ Proof.
   * inversion Hru.
   * clear q1 EQq1 th EQth.
   inversion Hru
-  as [phi'' EQphi'' EQphi EQreg EQq2'| | | |
-     |EQphi EQphi' EQreg EQq2'];
+  as [phi'' EQphi'' EQphi EQreg EQq2'| | | |].
   now apply models_PHI.
   * inversion Hru.
 Qed.
