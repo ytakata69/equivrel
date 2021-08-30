@@ -1,11 +1,24 @@
-.PHONY: clean all
+targets = automata.vo
+srcs = mu.v monotonic.v automata.v
+docdir = docs
+vobjs = $(srcs:.v=.vo)
+
+.PHONY: default all doc clean distclean
 %.vo: %.v
 	coqc $<
 
-all: mu.vo monotonic.vo automata.v
+default: $(targets)
+all: $(targets)
 
+automata.vo:  mu.vo monotonic.vo
 monotonic.vo: mu.vo
-automata.vo: mu.vo monotonic.vo
+
+doc: $(vobjs)
+	test -d $(docdir) || mkdir $(docdir)
+	coqdoc --gallina --utf8 -d $(docdir) $(srcs)
 
 clean:
 	$(RM) *.vo *.vo[ks] *.glob .*.aux *~
+
+distclean: clean
+	$(RM) $(docdir)/*.{html,css}
