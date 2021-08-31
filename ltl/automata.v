@@ -80,6 +80,8 @@ Inductive finalA
   | finalA_END : finalA (φ [END])
   | finalA_not_p : forall a, finalA (φ ~[p a])
   | finalA_not_MATCH : forall r, finalA (φ ~[↑ r])
+  | finalA_and : forall p1 p2,
+    finalA (φ p1) -> finalA (φ p2) -> finalA (φ p1 ../\ p2)
   .
 
 Lemma tt_loop_exists :
@@ -94,6 +96,37 @@ Proof.
   * apply ruleA_PHI.
   * now unfold models_phi.
   + trivial.
+Qed.
+
+Lemma satisfied_at_end_is_finalA :
+  forall phi theta,
+  models_phi nil theta phi <-> finalA (φ phi).
+Proof.
+  intros phi theta.
+  split.
+  - intros Hmo.
+  induction phi as [l | l | p1 IHp1 p2 IHp2].
+  + destruct l;
+  try now unfold models_phi in Hmo.
+  * apply finalA_tt.
+  * apply finalA_END.
+  + destruct l;
+  try unfold models_phi in Hmo;
+  try now unfold models_atom in Hmo.
+  * apply finalA_not_MATCH.
+  * apply finalA_not_p.
+  + unfold models_phi in Hmo.
+  destruct Hmo as [Hp1 Hp2].
+  apply IHp1 in Hp1.
+  apply IHp2 in Hp2.
+  now apply finalA_and.
+
+  - induction phi as [l | l | p1 IHp1 p2 IHp2];
+  intros Hf;
+  try (inversion Hf; now unfold models_phi).
+  inversion Hf as [| | | | p1' p2' Hf1 Hf2 [EQp1' EQp2']].
+  unfold models_phi.
+  split; [apply IHp1 | apply IHp2]; trivial.
 Qed.
 
 Section CorrectnessOfConversionToRA.
@@ -132,43 +165,26 @@ Proof.
   destruct w as [| a w].
   -- (* w = nil -> ... *)
   exists (φ phi).
-  destruct phi as [l0 | l0].
-  ++ (* sigma v = φ [l0] -> ... *)
-  destruct l0;
+  destruct phi;
   split;
   try apply moveA_star_ref;
-  try now unfold models_atom in Hmo;
-  try apply finalA_tt;
-  try apply finalA_END.
-  ++ (* sigma v = φ ~[l0] -> ... *)
-  unfold models_phi in Hmo.
-  destruct l0;
-  split;
-  try apply moveA_star_ref;
-  try now unfold models_atom in Hmo;
-  try apply finalA_not_MATCH;
-  try apply finalA_not_p.
+  now apply satisfied_at_end_is_finalA with theta.
   -- (* w' = a :: w -> ... *)
   exists (φ [tt]).
-  destruct phi as [l0 | l0].
+  destruct phi as [l0 | l0 | p1 p2];
+  split;
+  try apply finalA_tt;
+  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
+  try apply tt_loop_exists.
   ++ (* sigma v = φ [l0] -> ... *)
-  remember l0 as l1.
-  destruct l0;
-  split; try apply finalA_tt;
-  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
-  try apply tt_loop_exists;
-  apply moveA_not_update with (phi := [l1]);
-  try apply Hmo;
-  apply ruleA_PHI.
+  apply moveA_not_update with (phi := [l0]);
+  try apply Hmo; apply ruleA_PHI.
   ++ (* sigma v = φ ~[l] -> ... *)
-  remember l0 as l1.
-  destruct l0;
-  split; try apply finalA_tt;
-  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
-  try apply tt_loop_exists;
-  apply moveA_not_update with (phi := ~[l1]);
-  try apply Hmo;
-  apply ruleA_PHI.
+  apply moveA_not_update with (phi := ~[l0]);
+  try apply Hmo; apply ruleA_PHI.
+  ++ (* sigma v = φ p1 ../\ p2 -> ... *)
+  apply moveA_not_update with (phi := p1 ../\ p2);
+  try apply Hmo; apply ruleA_PHI.
 
   * (* sigma v = ↓ r, psi -> ... *)
   rewrite <- EQpsi in Hra';
@@ -244,43 +260,27 @@ Proof.
   destruct w as [| a w].
   -- (* w = nil -> ... *)
   exists (φ phi).
-  destruct phi as [l0 | l0].
-  ++ (* sigma v = φ [l0] -> ... *)
-  destruct l0;
+  destruct phi;
   split;
   try apply moveA_star_ref;
-  try now unfold models_atom in Hmo;
-  try apply finalA_tt;
-  try apply finalA_END.
-  ++ (* sigma v = φ ~[l0] -> ... *)
-  unfold models_phi in Hmo.
-  destruct l0;
-  split;
-  try apply moveA_star_ref;
-  try now unfold models_atom in Hmo;
-  try apply finalA_not_MATCH;
-  try apply finalA_not_p.
+  now apply satisfied_at_end_is_finalA with theta.
+
   -- (* w' = a :: w -> ... *)
   exists (φ [tt]).
-  destruct phi as [l0 | l0].
+  destruct phi as [l0 | l0 | p1 p2];
+  split;
+  try apply finalA_tt;
+  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
+  try apply tt_loop_exists.
   ++ (* sigma v = φ [l0] -> ... *)
-  remember l0 as l1.
-  destruct l0;
-  split; try apply finalA_tt;
-  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
-  try apply tt_loop_exists;
-  apply moveA_not_update with (phi := [l1]);
-  try apply Hmo;
-  apply ruleA_PHI.
+  apply moveA_not_update with (phi := [l0]);
+  try apply Hmo; apply ruleA_PHI.
   ++ (* sigma v = φ ~[l] -> ... *)
-  remember l0 as l1.
-  destruct l0;
-  split; try apply finalA_tt;
-  apply moveA_star_trans with (q2 := (φ [tt], theta, w));
-  try apply tt_loop_exists;
-  apply moveA_not_update with (phi := ~[l1]);
-  try apply Hmo;
-  apply ruleA_PHI.
+  apply moveA_not_update with (phi := ~[l0]);
+  try apply Hmo; apply ruleA_PHI.
+  ++ (* sigma v = φ p1 ../\ p2 -> ... *)
+  apply moveA_not_update with (phi := p1 ../\ p2);
+  try apply Hmo; apply ruleA_PHI.
 
   * (* sigma v = ↓ r, psi -> ... *)
   rewrite <- EQpsi in Hra';
@@ -402,7 +402,10 @@ Proof.
   intros EQw EQtheta' EQqF.
   rewrite EQqF in Hfin.
   rewrite<- EQw.
-  inversion Hfin; now apply models_PHI.
+  inversion Hfin as [| | | |p1 p2 Hf1 Hf2 EQp1p2];
+  apply models_PHI; try now auto.
+  apply satisfied_at_end_is_finalA.
+  now rewrite EQp1p2.
   - (* inductive step *)
   assert (IH' := IH Heqy).
   clear IH.

@@ -26,6 +26,7 @@ Inductive ltl_atom :=
 Inductive ltl_phi :=
   | pos : ltl_atom -> ltl_phi  (* a positive literal *)
   | neg : ltl_atom -> ltl_phi  (* a negative literal *)
+  | AND_phi : ltl_phi -> ltl_phi -> ltl_phi
   .
 
 Inductive ltl :=
@@ -42,6 +43,7 @@ Inductive ltl :=
 Notation "'↑' r" := (MATCH r) (at level 75).
 Notation "a '.\/' b" := (OR   a b) (at level 85, right associativity).
 Notation "a './\' b" := (AND  a b) (at level 75, right associativity).
+Notation "a '../\' b" := (AND_phi a b) (at level 75, right associativity).
 Notation  "'[' a ']'" := (pos a).
 Notation "'~[' a ']'" := (neg a).
 Notation "'φ' p" := (PHI p) (at level 78).
@@ -88,12 +90,14 @@ Definition models_atom
   | _, _ => False
   end.
 
-Definition models_phi
+Fixpoint models_phi
   (w : data_word) (theta : Theta) (phi : ltl_phi)
   : Prop :=
   match phi with
   | pos atom =>   models_atom w theta atom
   | neg atom => ~ models_atom w theta atom
+  | AND_phi p1 p2 =>
+      models_phi w theta p1 /\ models_phi w theta p2
   end.
 
 (*
