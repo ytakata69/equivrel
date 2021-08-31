@@ -264,3 +264,169 @@ Proof.
 Qed.
 
 End Monotonicity.
+
+
+Inductive var_not_appear (v : V)
+  : ltl -> Prop :=
+  | var_not_appear_VAR (v1 : V) :
+      v <> v1 ->
+      var_not_appear v (var v1)
+  | var_not_appear_OR (p1 p2 : ltl) :
+      var_not_appear v p1 ->
+      var_not_appear v p2 ->
+      var_not_appear v (p1 .\/ p2)
+  | var_not_appear_AND (psi : ltl) (phi : ltl_phi) :
+      var_not_appear v psi ->
+      var_not_appear v (psi ./\ phi)
+  | var_not_appear_STORE (r : register) (psi : ltl) :
+      var_not_appear v psi ->
+      var_not_appear v (↓ r, psi)
+  | var_not_appear_X (psi : ltl) :
+      var_not_appear v psi ->
+      var_not_appear v (X psi)
+  | var_not_appear_U (phi : ltl_phi) (psi : ltl) :
+      var_not_appear v psi ->
+      var_not_appear v (phi U psi)
+  | var_not_appear_PHI (phi : ltl_phi) :
+      var_not_appear v (φ phi)
+  | var_not_appear_G (phi : ltl_phi) :
+      var_not_appear v (G phi)
+  .
+
+Lemma ineq_sym {A : Type} :
+  forall x y : A, x <> y <-> y <> x.
+Proof.
+  intros x y.
+  split.
+  - intros nxy yx. now apply nxy.
+  - intros nyx xy. now apply nyx.
+Qed.
+
+Section VarExample.
+
+Variable  r : register.
+Variable  a : At.
+Variables v1 v2 : V.
+Hypothesis var_discrimination : v1 <> v2.
+Let phi1 := (↓ r, (X (var v1))) ./\ ([p a] ../\ ~[↑ r]).
+
+Goal ~ var_not_appear v1 phi1.
+Proof.
+  intros H.
+  inversion H as [| |psi phi H1 [EQpsi EQphi] | | | | |].
+  clear psi EQpsi phi EQphi.
+  inversion H1 as [| | | r' psi H2 [EQr' EQpsi]| | | |].
+  clear r' EQr' psi EQpsi.
+  inversion H2 as [| | | | psi H3 EQpsi| | |].
+  clear psi EQpsi.
+  inversion H3 as [v1' Hv1 EQv1'| | | | | | |].
+  now apply Hv1.
+Qed.
+
+Goal var_not_appear v2 phi1.
+Proof.
+  apply var_not_appear_AND.
+  apply var_not_appear_STORE.
+  apply var_not_appear_X.
+  apply var_not_appear_VAR.
+  now apply ineq_sym.
+Qed.
+
+End VarExample.
+
+Section UnusedVar.
+
+Variables sigma1 sigma2 : eqn_sys.
+Variable v1 : V.
+Hypothesis v1_not_in_sigma1 :
+  forall v, var_not_appear v1 (sigma1 v).
+Hypothesis sigma_equiv :
+  forall v, v <> v1 -> sigma1 v = sigma2 v.
+
+Lemma unused_var_not_matter :
+  forall i theta w,
+  forall v, v <> v1 ->
+  Fpow_emp sigma1 i v theta w <-> Fpow_emp sigma2 i v theta w.
+Proof.
+  induction i; intros theta w v Hv1.
+  - (* i = 0 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  reflexivity.
+  - (* inductive step on i *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F at 1.
+  unfold F at 2.
+  rewrite<- (sigma_equiv v Hv1).
+  assert (Hnv1 := v1_not_in_sigma1 v).
+  generalize dependent w.
+  generalize dependent theta.
+  induction (sigma1 v); intros theta w.
+  + (* sigma1 v = var v0 -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  apply models_var;
+  apply IHi;
+  inversion Hx; trivial;
+  try now apply ineq_sym.
+  + (* sigma1 v = l1 .\/ l2 -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  apply models_OR;
+  inversion Hx
+  as [| | | |w' th u p1' p2' Ho | | |];
+  destruct Ho as [Ho | Ho];
+  try (left; now apply IHl1);
+  try (right; now apply IHl2).
+  + (* sigma1 v = l ./\ l0 -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  inversion Hx;
+  apply models_AND;
+  try apply IHl;
+  auto.
+  + (* sigma1 v = ↓ r, l -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  inversion Hx;
+  apply models_STORE;
+  now apply IHl.
+  + (* sigma1 v = X l -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  inversion Hx;
+  apply models_X;
+  now apply IHl.
+  + (* sigma1 v = l U l0 -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  inversion Hx
+  as [| | | | | | w' th u l' l0' Hx' EQu EQw'|];
+  clear w' EQw';
+  destruct Hx' as [w' [Hx' Hsuf]];
+  apply models_U;
+  exists w';
+  split;
+  try apply IHl; auto.
+  + (* sigma1 v = φ l -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  inversion Hx;
+  now apply models_PHI.
+  + (* sigma1 v = G l -> ... *)
+  inversion Hnv1.
+  split;
+  intros Hx;
+  inversion Hx;
+  now apply models_G.
+Qed.
+
+End UnusedVar.
