@@ -1,6 +1,6 @@
 targets = automata.vo
-srcs = mu.v monotonic.v automata.v
-docdir = docs
+srcs = mu.v eqnSys.v automata.v
+docdir = ../docs
 vobjs = $(srcs:.v=.vo)
 
 .PHONY: default all doc clean distclean
@@ -10,8 +10,8 @@ vobjs = $(srcs:.v=.vo)
 default: $(targets)
 all: $(targets)
 
-automata.vo:  mu.vo monotonic.vo
-monotonic.vo: mu.vo
+automata.vo:  mu.vo eqnSys.vo
+eqnSys.vo: mu.vo
 
 doc: $(vobjs)
 	test -d $(docdir) || mkdir $(docdir)

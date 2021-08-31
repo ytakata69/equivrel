@@ -1,5 +1,5 @@
 Require Import mu.
-Require Import monotonic.
+Require Import eqnSys.
 
 Inductive ra_ltl : ltl -> Prop :=
   | ra_ltl_OR :
@@ -96,7 +96,7 @@ Proof.
   + trivial.
 Qed.
 
-Section Converting_Equations_into_RA.
+Section CorrectnessOfConversionToRA.
 
 Variable sigma : eqn_sys.
 Hypothesis Hra :
@@ -106,7 +106,7 @@ Variable ell : nat.
 Definition lfpF := Fpow_emp sigma ell.
 Hypothesis HlfpF : lfpF = F sigma lfpF.
 
-Theorem sigma_to_A_1 :
+Theorem A_is_equivalent_to_sigma_1 :
   forall w v theta,
   (w, theta |= lfpF, sigma v) ->
   exists theta' qF,
@@ -380,7 +380,7 @@ Proof.
   inversion Hra'.
 Qed.
 
-Theorem sigma_to_A_2 :
+Theorem A_is_equivalent_to_sigma_2 :
   forall w v theta,
   (exists theta' qF,
    finalA qF /\
@@ -496,4 +496,4 @@ Proof.
   * inversion Hru.
 Qed.
 
-End Converting_Equations_into_RA.
+End CorrectnessOfConversionToRA.

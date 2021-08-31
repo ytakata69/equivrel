@@ -150,50 +150,6 @@ Inductive models :
 Notation "'(' w ',' theta '|=' u ',' psi ')'"
   := (models u w theta psi).
 
-(*
-Scheme Equality for list.
-Scheme Equality for prod.
-Axiom D_eq_dec :
-  forall x y : D, {x = y} + {x <> y}.
-Parameter Sigma_beq : Sigma -> Sigma -> bool.
-Lemma Sigma_eq_dec :
-  forall x y : Sigma, {x = y} + {x <> y}.
-Proof.
-  intros x y.
-  case_eq (Sigma_beq x y).
-  destruct (Sigma_eq_dec x y).
-Definition D_beq (d1 d2 : D) : bool :=
-  if D_eq_dec d1 d2 then true else false.
-Lemma Sigma_D_dec :
-  forall s1 s2 : Sigma * D,
-  {s1 = s2} + {s1 <> s2}.
-Proof.
-  apply prod_eq_dec with (eq_A:=Sigma_beq) (eq_B:=D_beq).
-  - intros x y H.
-  unfold Sigma_beq in H.
-
-  assert (H' := Sigma_dec x y).
-  unfold Sigma_dec in H.
-Lemma data_word_dec :
-  forall w1 w2 : data_word,
-  {w1 = w2} + {w1 <> w2}.
-Proof.
-  eapply list_eq_dec.
-
-Theorem models_dec :
-  forall w theta u psi,
-  {(w, theta |= u, psi)} + {~ (w, theta |= u, psi)}.
-Proof.
-  intros w theta u psi.
-  induction psi.
-  - assert (H: {In (w, theta) (u v)} + {~ In (w, theta) (u v)}).
-  {
-  apply in_dec.
-  eapply prod_eq_dec.
-  apply list_beq.
-  }
-*)
-
 (* Equality of two ltl formulas *)
 
 Axiom ltl_extensionality :
@@ -204,160 +160,6 @@ Axiom ltl_extensionality :
 Axiom Theta_extensionality :
   forall theta1 theta2 : Theta,
     (forall r, theta1 r = theta2 r) -> theta1 = theta2.
-
-(* Equation systems *)
-
-Definition eqn_sys := V -> ltl.  (* the set of equation systems *)
-
-(* The transformation from Env to Env *)
-Definition F (eqns : eqn_sys) (env : Env) : Env :=
-  fun (v : V) (theta : Theta) (w : data_word) =>
-  (w, theta |= env, (eqns v)).
-
-(* the environment that assigns the empty set to every variable *)
-Definition empty_env : Env :=
-  fun (v : V) (theta : Theta) (w : data_word) => False.
-
-Section EqnExample.
-
-Variable b : Sigma.
-Local Definition w : data_word :=
-  ((b, 2) :: (b, 3) :: (b, 3) :: (b, 4) :: (b, 2) :: nil).
-Local Definition eqns : eqn_sys :=
-  fun v => match v with
-    1 => ↓ 1, X (var 2)
-  | 2 => ((X (var 2)) ./\ ~[↑ 1]) .\/ ((X (var 3)) ./\ [↑ 1])
-  | 3 => φ [END]
-  | _ => φ [tt]
-  end.
-
-Local Definition th : Theta :=
-  fun r => match r with
-    1 => 2
-  | _ => 0
-  end.
-
-Goal F eqns empty_env 3 th nil.
-Proof.
-  unfold F.
-  unfold eqns.
-  apply models_PHI.
-  unfold models_phi.
-  now unfold models_atom.
-Qed.
-Goal ~ F eqns empty_env 1 th nil.
-Proof.
-  unfold F.
-  unfold eqns.
-  intros H.
-  inversion H.
-Qed.
-Goal forall w' th',
-  ~ F eqns empty_env 1 th' w'.
-Proof.
-  intros w' th'.
-  unfold F.
-  unfold eqns.
-  intros H.
-  inversion H
-  as [| h t th'' u r psi Hht EQu EQht EQth'' [EQr EQpsi] | | | | | |].
-  clear th'' EQth'' u EQu r EQr psi EQpsi.
-  inversion Hht
-  as [| |h' t' th'' u psi Ht EQu [EQh' EQt'] EQth'' EQpsi| | | | |].
-  clear h' EQh' t' EQt' th'' EQth'' u EQu psi EQpsi.
-  inversion Ht
-  as [| | | | | | |w'' th'' u v He EQu EQw'' EQth'' EQv].
-  clear w'' EQw'' th'' EQth'' u EQu v EQv.
-  unfold empty_env in He.
-  contradiction.
-Qed.
-Goal forall w' th',
-  ~ F eqns empty_env 2 th' w'.
-Proof.
-  intros w' th'.
-  unfold F.
-  unfold eqns.
-  intros H.
-  inversion H
-  as [| | | | w'' th'' u psi1 psi2 Ho EQu EQw'' EQth'' [EQp1 EQp2]| | |].
-  clear w'' EQw'' th'' EQth'' u EQu psi1 EQp1 psi2 EQp2.
-  destruct Ho as [Ho | Ho].
-  - inversion Ho
-  as [| | |w'' th'' u psi phi Hx Hp EQu EQw'' EQth'' [EQpsi EQphi]| | | |].
-  clear w'' EQw'' th'' EQth'' u EQu psi EQpsi phi EQphi.
-  inversion Hx
-  as [| |h t th'' u psi Ht EQu EQht EQth'' EQpsi | | | | |].
-  clear th'' EQth'' u EQu psi EQpsi.
-  inversion Ht
-  as [| | | | | | |w'' th'' u v He EQu EQw'' EQth'' EQv].
-  clear w'' EQw'' th'' EQth'' u EQu v EQv.
-  unfold empty_env in He.
-  contradiction.
-  - inversion Ho
-  as [| | |w'' th'' u psi phi Hx Hp EQu EQw'' EQth'' [EQpsi EQphi]| | | |].
-  clear w'' EQw'' th'' EQth'' u EQu psi EQpsi phi EQphi.
-  inversion Hx
-  as [| |h t th'' u psi Ht EQu EQht EQth'' EQpsi | | | | |].
-  clear th'' EQth'' u EQu psi EQpsi.
-  inversion Ht
-  as [| | | | | | |w'' th'' u v He EQu EQw'' EQth'' EQv].
-  clear w'' EQw'' th'' EQth'' u EQu v EQv.
-  unfold empty_env in He.
-  contradiction.
-Qed.
-Goal (F eqns) ((F eqns) empty_env) 2 th ((b, 2)::nil).
-Proof.
-  unfold F.
-  unfold eqns at 2.
-  apply models_OR.
-  right.
-  apply models_AND.
-  - apply models_X.
-  apply models_var.
-  unfold eqns.
-  apply models_PHI.
-  unfold models_phi.
-  now unfold models_atom.
-  - unfold models_phi.
-  unfold models_atom.
-  unfold snd.
-  now unfold th.
-Qed.
-
-End EqnExample.
-
-Lemma meanings_of_models_var :
-  forall (w : data_word) (sigma : eqn_sys)
-    (theta : Theta) (u : Env) (v : V),
-  (w, theta |= F sigma u, var v) <->
-  (w, theta |= u, sigma v).
-Proof.
-  intros w sigma theta u v.
-  split.
-  - (* -> *)
-  intros H.
-  inversion H
-  as [| | | | | | |w' th u' v' H' EQu' EQw' EQth EQv'].
-  clear w' EQw' th EQth u' EQu' v' EQv'.
-  now unfold F in H'.
-  - (* <- *)
-  intros H.
-  apply models_var.
-  now unfold F.
-Qed.
-
-Lemma meanings_of_models_var_on_lfp :
-  forall (w : data_word) (sigma : eqn_sys)
-    (theta : Theta) (u : Env) (v : V),
-  u = F sigma u ->
-  (w, theta |= u, var v) <->
-  (w, theta |= u, sigma v).
-Proof.
-  intros w sigma theta u v.
-  intros Hlfp.
-  rewrite Hlfp at 1.
-  apply meanings_of_models_var.
-Qed.
 
 (* distribution over OR *)
 
@@ -481,11 +283,15 @@ Proof.
   apply Forall_sfx_until; auto.
 Qed.
 
+Section GandU.
+
+Variable phi : ltl_phi.
+Variable theta : Theta.
+Variable u : Env.
+
 Lemma nil_satisfies_U_end :
-  forall (theta : Theta) (u : Env) (phi : ltl_phi),
   (nil, theta |= u, phi U (φ [END])).
 Proof.
-  intros theta u phi.
   apply models_U.
   exists nil.
   split.
@@ -496,21 +302,25 @@ Proof.
 Qed.
 
 Lemma nil_satisfies_G_any :
-  forall (theta : Theta) (u : Env) (phi : ltl_phi),
   (nil, theta |= u, G phi).
 Proof.
-  intros theta u phi.
   rewrite G_equals_phi_U_end.
   apply nil_satisfies_U_end.
 Qed.
 
-Lemma F_phi_equals_not_G_not_phi_1 :
-  forall (phi : ltl_atom) (theta : Theta) (u : Env),
+End GandU.
+
+Section GandF.
+
+Variable phi : ltl_atom.
+Variable theta : Theta.
+Variable u : Env.
+
+Lemma F_equals_not_G_not_1 :
   ~ (nil, theta |= u, φ [phi]) ->
-  forall w,
-  (w, theta |= u, [tt] U (φ [phi])) -> ~ (w, theta |= u, G ~[phi]).
+  forall w, (w, theta |= u, [tt] U (φ [phi])) -> ~ (w, theta |= u, G ~[phi]).
 Proof.
-  intros phi theta u Hphi.
+  intros Hphi.
   intros w.
 
   intros Hf Hg.
@@ -534,13 +344,13 @@ Proof.
   as [p l | p s x l Hf2 IH Hp].
   * destruct l as [| x l].
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi' EQphi'.
   unfold models_phi in Hm.
   now unfold models_atom in Hm.
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi' EQphi'.
   inversion Hg'
   as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
   clear p' EQp' s EQs x' EQx' l' EQl'.
@@ -559,13 +369,13 @@ Proof.
   as [p l | p s x l Hf2 IH Hp].
   * destruct l as [| x l].
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi' EQphi'.
   unfold models_phi in Hm.
   now unfold models_atom in Hm.
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi' EQphi'.
   inversion Hg'
   as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
   clear p' EQp' s EQs x' EQx' l' EQl'.
@@ -584,13 +394,11 @@ Proof.
   now unfold models_atom.
 Qed.
 
-Lemma F_phi_equals_not_G_not_phi_2 :
-  forall (phi : ltl_atom) (theta : Theta) (u : Env),
+Lemma F_equals_not_G_not_2 :
   ~ (nil, theta |= u, φ ~[phi]) ->
-  forall w,
-  (w, theta |= u, [tt] U (φ ~[phi])) -> ~ (w, theta |= u, G [phi]).
+  forall w, (w, theta |= u, [tt] U (φ ~[phi])) -> ~ (w, theta |= u, G [phi]).
 Proof.
-  intros phi theta u Hphi.
+  intros Hphi.
   intros w.
 
   intros Hf Hg.
@@ -609,13 +417,13 @@ Proof.
   as [p l | p s x l Hf2 IH Hp].
   * destruct l as [| x l].
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi' EQphi'.
   unfold models_phi in Hm.
   now unfold models_atom in Hm.
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi' EQphi'.
   inversion Hg'
   as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
   clear p' EQp' s EQs x' EQx' l' EQl'.
@@ -644,13 +452,13 @@ Proof.
   as [p l | p s x l Hf2 IH Hp].
   * destruct l as [| x l].
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi'.
   unfold models_phi in Hm.
   now unfold models_atom in Hm.
   -- inversion Hf1
-  as [w1 th1 u1 phi Hm EQu1 EQw1 EQth1 EQphi| | | | | | |].
-  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi.
+  as [w1 th1 u1 phi' Hm EQu1 EQw1 EQth1 EQphi'| | | | | | |].
+  clear w1 EQw1 th1 EQth1 u1 EQu1 phi EQphi'.
   inversion Hg'
   as [| p' s x' l' Hsl Hml EQp' EQs [EQx' EQl']].
   clear p' EQp' s EQs x' EQx' l' EQl'.
@@ -664,12 +472,9 @@ Proof.
   apply Hsl.
 Qed.
 
-Lemma F_phi_equals_not_G_not_phi_3 :
-  forall (phi : ltl_atom) (theta : Theta) (u : Env),
-  forall w,
-  ~ (w, theta |= u, [tt] U (φ [phi])) -> (w, theta |= u, G ~[phi]).
+Lemma F_equals_not_G_not_3 :
+  forall w, ~ (w, theta |= u, [tt] U (φ [phi])) -> (w, theta |= u, G ~[phi]).
 Proof.
-  intros phi theta u.
   intros w.
   intros Hnf.
   apply models_G.
@@ -701,16 +506,11 @@ Proof.
   * apply Forall_sfx_until_eq.
 Qed.
 
-Definition classic := forall P, ~~P -> P.
+Hypothesis classic : forall P, ~~P -> P.
 
-Lemma F_phi_equals_not_G_not_phi_4 :
-  classic ->
-  forall (phi : ltl_atom) (theta : Theta) (u : Env),
-  forall w,
-  ~ (w, theta |= u, [tt] U (φ ~[phi])) -> (w, theta |= u, G [phi]).
+Lemma F_equals_not_G_not_4 :
+  forall w, ~ (w, theta |= u, [tt] U (φ ~[phi])) -> (w, theta |= u, G [phi]).
 Proof.
-  intros classic.
-  intros phi theta u.
   intros w.
   intros Hnf.
   apply models_G.
@@ -743,3 +543,4 @@ Proof.
   * apply Forall_sfx_until_eq.
 Qed.
 
+End GandF.
