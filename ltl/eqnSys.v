@@ -293,51 +293,10 @@ Inductive var_not_appear (v : V)
       var_not_appear v (G phi)
   .
 
-Lemma ineq_sym {A : Type} :
-  forall x y : A, x <> y <-> y <> x.
-Proof.
-  intros x y.
-  split.
-  - intros nxy yx. now apply nxy.
-  - intros nyx xy. now apply nyx.
-Qed.
-
-Section VarExample.
-
-Variable  r : register.
-Variable  a : At.
-Variables v1 v2 : V.
-Hypothesis var_discrimination : v1 <> v2.
-Let phi1 := (↓ r, (X (var v1))) ./\ ([p a] ../\ ~[↑ r]).
-
-Goal ~ var_not_appear v1 phi1.
-Proof.
-  intros H.
-  inversion H as [| |psi phi H1 [EQpsi EQphi] | | | | |].
-  clear psi EQpsi phi EQphi.
-  inversion H1 as [| | | r' psi H2 [EQr' EQpsi]| | | |].
-  clear r' EQr' psi EQpsi.
-  inversion H2 as [| | | | psi H3 EQpsi| | |].
-  clear psi EQpsi.
-  inversion H3 as [v1' Hv1 EQv1'| | | | | | |].
-  now apply Hv1.
-Qed.
-
-Goal var_not_appear v2 phi1.
-Proof.
-  apply var_not_appear_AND.
-  apply var_not_appear_STORE.
-  apply var_not_appear_X.
-  apply var_not_appear_VAR.
-  now apply ineq_sym.
-Qed.
-
-End VarExample.
-
 Section UnusedVar.
 
 Variables sigma1 sigma2 : eqn_sys.
-Variable vs : list V.  (* list of unused var *)
+Variable vs : list V.
 Hypothesis v1_not_in_sigma1 :
   forall v v1, In v1 vs -> var_not_appear v1 (sigma1 v).
 Hypothesis sigma_equiv :
