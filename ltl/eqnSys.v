@@ -731,4 +731,219 @@ Qed.
 
 End NormalizeStoreX.
 
+Section NormalizeU.
+
+Variables sigma1 sigma2 : eqn_sys.
+Variables v1 v3 : V.
+Hypothesis sigma_equiv :
+  forall v, v <> v3 -> sigma1 v = sigma2 v.
+Hypothesis v1_neq_v3 : v1 <> v3.
+Variable phi1 : ltl_phi.
+Variable psi1 : ltl.
+Hypothesis EQv3_1 : sigma1 v3 = (phi1 U psi1).
+Hypothesis EQv3_2 : sigma2 v3 = (psi1 .\/ (X (var v3) ./\ phi1)).
+
+Theorem normalize_U_1 :
+  forall l,
+  env_leq (Fpow_emp sigma2 l) (Fpow_emp sigma1 l).
+Proof.
+  induction l as [| l IHl].
+  - (* l = 0 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  now unfold env_leq.
+  - (* l > 0 -> ... *)
+  destruct l as [| l].
+  + (* l = 1 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F.
+  unfold env_leq.
+  intros v theta w.
+  destruct (var_eq_or_neq v v3)
+  as [v_eq_v3 | v_neq_v3].
+  * (* v = v3 -> ... *)
+  rewrite v_eq_v3.
+  rewrite EQv3_2.
+  rewrite EQv3_1.
+  rewrite U_equals_psi_or_phi_and_XU.
+  intros Hx.
+  apply models_OR.
+  inversion Hx
+  as [| | | | w' th u p1' p2' Ho EQu EQw' EQth [EQp1' EQp2']| | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  destruct Ho as [Ho | Ho];
+  [left | right]; auto.
+  inversion Ho
+  as [| | |w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2'] | | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  apply models_AND; auto.
+  inversion Hxv1
+  as [| |h t th u p1' Hv1 EQu EQht EQth EQp1'| | | | |].
+  clear th EQth u EQu p1' EQp1'.
+  now inversion Hv1.
+  * (* v <> v3 -> ... *)
+  assert (EQsv := sigma_equiv v v_neq_v3).
+  now rewrite<- EQsv.
+
+  + (* l > 1 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F at 1.
+  unfold F at 3.
+  unfold env_leq.
+  intros v theta w.
+  destruct (var_eq_or_neq v v3)
+  as [v_eq_v3 | v_neq_v3].
+  * (* v = v3 -> ... *)
+  rewrite v_eq_v3.
+  rewrite EQv3_1.
+  rewrite EQv3_2.
+  rewrite U_equals_psi_or_phi_and_XU.
+  intros Hx.
+  apply models_OR.
+  inversion Hx
+  as [| | | | w' th u p1' p2' Ho EQu EQw' EQth [EQp1' EQp2']| | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  destruct Ho as [Ho | Ho];
+  [left | right].
+  -- apply models_is_monotonic with (u1 := Fpow_emp sigma1 (S l)).
+  now unfold env_leq.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma2 (S l));
+  try apply IHl.
+  apply Ho.
+  -- inversion Ho
+  as [| | | w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  apply models_AND; auto.
+  inversion Hxv1
+  as [| |h t th u p1' Hv1 EQu EQht EQth EQp1'| | | | |].
+  clear th EQth u EQu p1' EQp1'.
+  clear Hx Ho Hxv1 Hp1 w EQht.
+  apply models_X.
+  rewrite<- EQv3_1.
+  apply models_is_monotonic with (u2 := Fpow_emp sigma1 (S l)) in Hv1;
+  try apply IHl.
+  inversion Hv1
+  as [| | | | | | |t' th u v' Hf EQu EQt' EQth EQv'].
+  clear t' EQt' th EQth u EQu v' EQv'.
+  unfold Fpow_emp in Hf.
+  unfold Fpow in Hf.
+  unfold F at 1 in Hf.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  auto.
+  apply Fpow_is_monotonic_1.
+  * (* v <> v3 -> ... *)
+  assert (EQsv := sigma_equiv v v_neq_v3).
+  rewrite<- EQsv.
+  apply models_is_monotonic.
+  apply IHl.
+Qed.
+
+Variable fpF_2 : Env.
+Hypothesis fpF_is_fixpoint :
+  F sigma2 fpF_2 = fpF_2.
+
+Theorem normalize_U_2 :
+  forall l,
+  env_leq (Fpow_emp sigma1 l) fpF_2.
+Proof.
+  intros l.
+  induction l as [| l IHl].
+  - (* l = 0 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  now unfold env_leq.
+  - (* inductive step on l *)
+  unfold env_leq.
+  intros v theta w.
+  unfold Fpow_emp.
+  unfold Fpow.
+  rewrite<- fpF_is_fixpoint.
+  unfold F.
+  destruct (var_eq_or_neq v v3)
+  as [v_eq_v3 | v_neq_v3].
+  + (* v = v3 -> ... *)
+  rewrite v_eq_v3.
+  rewrite EQv3_1.
+  rewrite EQv3_2.
+  rewrite U_equals_psi_or_phi_and_XU.
+  intros Hx.
+  apply models_OR.
+  inversion Hx
+  as [| | | | w' th u p1' p2' Ho EQu EQw' EQth [EQp1' EQp2']| | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  destruct Ho as [Ho | Ho];
+  [left | right];
+  try now apply models_is_monotonic with (u1 := Fpow_emp sigma1 l).
+  inversion Ho
+  as [| | | w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  apply models_AND; auto.
+  inversion Hxv1
+  as [| |h t th u p1' Hv1 EQu EQht EQth EQp1'| | | | |].
+  clear th EQth u EQu p1' EQp1'.
+  apply models_X.
+  clear Hx Ho Hxv1 Hp1 w h EQht.
+
+  induction t as [| a t IHt].
+  * (* t = nil -> ... *)
+  inversion Hv1
+  as [| | | | | |w th u p1' p2' Hu EQu EQw EQth [EQp1' EQp2']|].
+  clear w EQw th EQth u EQu p1' EQp1' p2' EQp2'.
+  destruct Hu as [w' [Hu Hsf]].
+  inversion Hsf as [p ls EQp EQls EQw'|].
+  clear p EQp ls EQls.
+  rewrite EQw' in Hu.
+  rewrite<- fpF_is_fixpoint.
+  apply models_var.
+  unfold F.
+  rewrite EQv3_2.
+  apply models_OR.
+  left.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  auto.
+  * (* t = a::t -> ... *)
+  rewrite U_equals_psi_or_phi_and_XU in Hv1.
+  inversion Hv1
+  as [| | | | w' th u p1' p2' Ho EQu EQw' EQth [EQp1' EQp2']| | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  destruct Ho as [Ho | Ho].
+  -- (* (a::t, theta |= Fpow_emp sigma1 l, psi1) -> ... *)
+  rewrite<- fpF_is_fixpoint.
+  apply models_var.
+  unfold F.
+  rewrite EQv3_2.
+  apply models_OR.
+  left.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  auto.
+  -- (* (a::t, theta |= Fpow_emp sigma1 l, X (phi1 U psi1) ./\ phi1) -> ... *)
+  inversion Ho
+  as [| | | w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  inversion Hxv1
+  as [| |h t' th u p1' Hu EQu [EQh EQt'] EQth EQp1'| | | | |].
+  clear h EQh t' EQt' th EQth u EQu p1' EQp1'.
+  rewrite<- fpF_is_fixpoint.
+  apply models_var.
+  unfold F.
+  rewrite EQv3_2.
+  apply models_OR.
+  right.
+  apply models_AND; auto.
+  apply models_X.
+  now apply IHt.
+
+  + (* v <> v3 -> ... *)
+  assert (EQsv := sigma_equiv v v_neq_v3).
+  rewrite<- EQsv.
+  intros Hx.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  try apply IHl.
+  apply Hx.
+Qed.
+
+End NormalizeU.
+
 End Normalization.
