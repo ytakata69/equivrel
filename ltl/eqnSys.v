@@ -337,15 +337,15 @@ End VarExample.
 Section UnusedVar.
 
 Variables sigma1 sigma2 : eqn_sys.
-Variable v1 : V.
+Variable vs : list V.
 Hypothesis v1_not_in_sigma1 :
-  forall v, var_not_appear v1 (sigma1 v).
+  forall v v1, In v1 vs -> var_not_appear v1 (sigma1 v).
 Hypothesis sigma_equiv :
-  forall v, v <> v1 -> sigma1 v = sigma2 v.
+  forall v, ~ In v vs -> sigma1 v = sigma2 v.
 
 Lemma unused_var_not_matter :
   forall i theta w,
-  forall v, v <> v1 ->
+  forall v, ~ In v vs ->
   Fpow_emp sigma1 i v theta w <-> Fpow_emp sigma2 i v theta w.
 Proof.
   induction i; intros theta w v Hv1.
@@ -359,20 +359,31 @@ Proof.
   unfold F at 1.
   unfold F at 2.
   rewrite<- (sigma_equiv v Hv1).
-  assert (Hnv1 := v1_not_in_sigma1 v).
+  assert (v1_not_in_sigma1' := v1_not_in_sigma1 v).
+  clear v1_not_in_sigma1.
   generalize dependent w.
   generalize dependent theta.
   induction (sigma1 v); intros theta w.
   + (* sigma1 v = var v0 -> ... *)
-  inversion Hnv1.
+  assert (Hnv0 : ~ In v0 vs).
+  { intros Hv0.
+    assert (Hnv1 := v1_not_in_sigma1' v0 Hv0).
+    inversion Hnv1 as [v0' Hcon| | | | | | |].
+    now apply Hcon. }
   split;
   intros Hx;
   apply models_var;
   apply IHi;
-  inversion Hx; trivial;
-  try now apply ineq_sym.
+  inversion Hx; trivial.
   + (* sigma1 v = l1 .\/ l2 -> ... *)
-  inversion Hnv1.
+  assert (Hnvl1 : forall v1, In v1 vs -> var_not_appear v1 l1).
+  { intros v1 Hv1in.
+    assert (Hnv1 := v1_not_in_sigma1' v1 Hv1in).
+    now inversion Hnv1. }
+  assert (Hnvl2 : forall v1, In v1 vs -> var_not_appear v1 l2).
+  { intros v1 Hv1in.
+    assert (Hnv1 := v1_not_in_sigma1' v1 Hv1in).
+    now inversion Hnv1. }
   split;
   intros Hx;
   apply models_OR;
@@ -382,7 +393,10 @@ Proof.
   try (left; now apply IHl1);
   try (right; now apply IHl2).
   + (* sigma1 v = l ./\ l0 -> ... *)
-  inversion Hnv1.
+  assert (Hnvl : forall v1, In v1 vs -> var_not_appear v1 l).
+  { intros v1 Hv1in.
+    assert (Hnv1 := v1_not_in_sigma1' v1 Hv1in).
+    now inversion Hnv1. }
   split;
   intros Hx;
   inversion Hx;
@@ -390,21 +404,30 @@ Proof.
   try apply IHl;
   auto.
   + (* sigma1 v = ↓ r, l -> ... *)
-  inversion Hnv1.
+  assert (Hnvl : forall v1, In v1 vs -> var_not_appear v1 l).
+  { intros v1 Hv1in.
+    assert (Hnv1 := v1_not_in_sigma1' v1 Hv1in).
+    now inversion Hnv1. }
   split;
   intros Hx;
   inversion Hx;
   apply models_STORE;
   now apply IHl.
   + (* sigma1 v = X l -> ... *)
-  inversion Hnv1.
+  assert (Hnvl : forall v1, In v1 vs -> var_not_appear v1 l).
+  { intros v1 Hv1in.
+    assert (Hnv1 := v1_not_in_sigma1' v1 Hv1in).
+    now inversion Hnv1. }
   split;
   intros Hx;
   inversion Hx;
   apply models_X;
   now apply IHl.
   + (* sigma1 v = l U l0 -> ... *)
-  inversion Hnv1.
+  assert (Hnvl : forall v1, In v1 vs -> var_not_appear v1 l0).
+  { intros v1 Hv1in.
+    assert (Hnv1 := v1_not_in_sigma1' v1 Hv1in).
+    now inversion Hnv1. }
   split;
   intros Hx;
   inversion Hx
@@ -416,13 +439,11 @@ Proof.
   split;
   try apply IHl; auto.
   + (* sigma1 v = φ l -> ... *)
-  inversion Hnv1.
   split;
   intros Hx;
   inversion Hx;
   now apply models_PHI.
   + (* sigma1 v = G l -> ... *)
-  inversion Hnv1.
   split;
   intros Hx;
   inversion Hx;
