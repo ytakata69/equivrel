@@ -452,6 +452,11 @@ Qed.
 
 End UnusedVar.
 
+Section Normalization.
+
+Hypothesis var_eq_or_neq :
+  forall v1 v2 : V, v1 = v2 \/ v1 <> v2.
+
 Section NormalizeOr.
 
 Variables sigma1 sigma2 : eqn_sys.
@@ -462,9 +467,6 @@ Hypothesis v1_neq_v3 : v1 <> v3.
 Hypothesis v2_neq_v3 : v2 <> v3.
 Hypothesis EQv3_1 : sigma1 v3 = ((sigma1 v1) .\/ (sigma1 v2)).
 Hypothesis EQv3_2 : sigma2 v3 = ((var v1) .\/ (var v2)).
-
-Hypothesis var_eq_or_neq :
-  forall v1 v2 : V, v1 = v2 \/ v1 <> v2.
 
 Theorem normalize_or_1 :
   forall l,
@@ -484,7 +486,6 @@ Proof.
   intros v theta w.
   destruct (var_eq_or_neq v v3)
   as [v_eq_v3 | v_neq_v3].
-
   + (* v = v3 -> ... *)
   rewrite v_eq_v3.
   rewrite EQv3_1.
@@ -508,7 +509,6 @@ Proof.
   apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
   auto;
   now unfold env_leq.
-
   + (* v <> v3 -> ... *)
   assert (EQsv := sigma_equiv v v_neq_v3).
   rewrite<- EQsv.
@@ -523,7 +523,6 @@ Proof.
   intros l.
   simpl.
   rewrite<- (plus_n_O l).
-
   induction l as [| l IHl].
   - (* l = 0 -> ... *)
   unfold Fpow_emp.
@@ -563,7 +562,6 @@ Proof.
   apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
   try apply IHl.
   apply Ho.
-
   + (* v <> v3 -> ... *)
   assert (EQsv := sigma_equiv v v_neq_v3).
   rewrite<- EQsv.
@@ -576,3 +574,161 @@ Proof.
 Qed.
 
 End NormalizeOr.
+
+Section NormalizeStoreX.
+
+Variables sigma1 sigma2 : eqn_sys.
+Variables v1 v3 : V.
+Hypothesis sigma_equiv :
+  forall v, v <> v3 -> sigma1 v = sigma2 v.
+Hypothesis v1_neq_v3 : v1 <> v3.
+Variable r : register.
+Variable phi1 : ltl_phi.
+Hypothesis EQv3_1 : sigma1 v3 = ((↓ r, X (sigma1 v1)) ./\ phi1).
+Hypothesis EQv3_2 : sigma2 v3 = ((↓ r, X (var v1)) ./\ phi1).
+
+Theorem normalize_store_X_1 :
+  forall l,
+  env_leq (Fpow_emp sigma2 l) (Fpow_emp sigma1 l).
+Proof.
+  induction l as [| l IHl].
+  - (* l = 0 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  now unfold env_leq.
+  - (* l > 0 -> ... *)
+  destruct l as [| l].
+  + (* l = 1 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F.
+  unfold env_leq.
+  intros v theta w.
+  destruct (var_eq_or_neq v v3)
+  as [v_eq_v3 | v_neq_v3].
+  * (* v = v3 -> ... *)
+  rewrite v_eq_v3.
+  rewrite EQv3_2.
+  intros Hx.
+  inversion Hx
+  as [| | | w' th u p1' p2' Hsx Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  inversion Hsx
+  as [|h t th u r' p1' Hxv1 EQu EQht EQth [EQr' EQp1']| | | | | |].
+  clear th EQth u EQu r' EQr' p1' EQp1'.
+  inversion Hxv1
+  as [| |h' t' th u p1' Hv1 EQu [EQh' EQt'] EQth EQp1'| | | | |].
+  clear h' EQh' t' EQt' th EQth u EQu p1' EQp1'.
+  now inversion Hv1.
+  * (* v <> v3 -> ... *)
+  assert (EQsv := sigma_equiv v v_neq_v3).
+  now rewrite<- EQsv.
+
+  + (* l > 1 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F at 1.
+  unfold F at 3.
+  unfold env_leq.
+  intros v theta w.
+  destruct (var_eq_or_neq v v3)
+  as [v_eq_v3 | v_neq_v3].
+  * (* v = v3 -> ... *)
+  rewrite v_eq_v3.
+  rewrite EQv3_1.
+  rewrite EQv3_2.
+  intros Hx.
+  inversion Hx
+  as [| | | w' th u p1' p2' Hsx Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  inversion Hsx
+  as [|h t th u r' p1' Hxv1 EQu EQht EQth [EQr' EQp1']| | | | | |].
+  clear th EQth u EQu r' EQr' p1' EQp1'.
+  inversion Hxv1
+  as [| |h' t' th u p1' Hv1 EQu [EQh' EQt'] EQth EQp1'| | | | |].
+  clear h' EQh' t' EQt' th EQth u EQu p1' EQp1'.
+  rewrite<- EQht in Hp1.
+  apply models_AND; auto.
+  clear Hx Hsx Hxv1 Hp1 w EQht.
+  apply models_STORE.
+  apply models_X.
+  inversion Hv1
+  as [| | | | | | |t' th u v' Hf EQu EQt' EQth EQv'].
+  clear t' EQt' th EQth u EQu v' EQv'.
+  unfold F in Hf.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l).
+  try apply Fpow_is_monotonic_1.
+  apply IHl.
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F at 1.
+  apply Hf.
+  * (* v <> v3 -> ... *)
+  assert (EQsv := sigma_equiv v v_neq_v3).
+  rewrite<- EQsv.
+  apply models_is_monotonic.
+  apply IHl.
+Qed.
+
+Theorem normalize_store_X_2 :
+  forall l,
+  env_leq (Fpow_emp sigma1 l) (Fpow_emp sigma2 (2 * l)).
+Proof.
+  intros l.
+  simpl.
+  rewrite<- (plus_n_O l).
+  induction l as [| l IHl].
+  - (* l = 0 -> ... *)
+  unfold Fpow_emp.
+  unfold Fpow.
+  now unfold env_leq.
+  - (* inductive step on l *)
+  simpl.
+  unfold Fpow_emp.
+  unfold Fpow.
+  unfold F at 1.
+  unfold F at 2.
+  unfold env_leq.
+  rewrite<- (plus_n_Sm l l).
+  intros v theta w.
+  destruct (var_eq_or_neq v v3)
+  as [v_eq_v3 | v_neq_v3].
+  + (* v = v3 -> ... *)
+  rewrite v_eq_v3.
+  rewrite EQv3_1.
+  rewrite EQv3_2.
+  intros Hx.
+  inversion Hx
+  as [| | | w' th u p1' p2' Hsx Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
+  inversion Hsx
+  as [|h t th u r' p1' Hxv1 EQu EQht EQth [EQr' EQp1']| | | | | |].
+  clear th EQth u EQu r' EQr' p1' EQp1'.
+  inversion Hxv1
+  as [| |h' t' th u p1' Hv1 EQu [EQh' EQt'] EQth EQp1'| | | | |].
+  clear h' EQh' t' EQt' th EQth u EQu p1' EQp1'.
+  rewrite<- EQht in Hp1.
+  apply models_AND; auto.
+  clear Hx Hsx Hxv1 Hp1 w EQht.
+  apply models_STORE.
+  apply models_X.
+  apply models_var.
+  unfold F at 1.
+  rewrite<- (sigma_equiv v1 v1_neq_v3).
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  try apply IHl.
+  apply Hv1.
+  + (* v <> v3 -> ... *)
+  assert (EQsv := sigma_equiv v v_neq_v3).
+  rewrite<- EQsv.
+  intros Hx.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma2 (l + l));
+  try apply Fpow_is_monotonic_1.
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  try apply IHl.
+  apply Hx.
+Qed.
+
+End NormalizeStoreX.
+
+End Normalization.
