@@ -693,14 +693,15 @@ End NormalizeStoreX.
 Section NormalizeU.
 
 Variables sigma1 sigma2 : eqn_sys.
-Variables v1 v3 : V.
+Variables v1 v2 v3 : V.
 Hypothesis sigma_equiv :
   forall v, v <> v3 -> sigma1 v = sigma2 v.
 Hypothesis v1_neq_v3 : v1 <> v3.
+Hypothesis v2_neq_v3 : v2 <> v3.
 Variable phi1 : ltl_phi.
-Variable psi1 : ltl.
-Hypothesis EQv3_1 : sigma1 v3 = (phi1 U psi1).
-Hypothesis EQv3_2 : sigma2 v3 = (psi1 .\/ (X (var v3) ./\ phi1)).
+Hypothesis EQv3_1 : sigma1 v3 = (phi1 U (sigma1 v1)).
+Hypothesis EQv3_2 : sigma2 v3 = ((var v1) .\/ (var v2)).
+Hypothesis EQv2_2 : sigma2 v2 = (X (var v3) ./\ phi1).
 
 Theorem normalize_U_1 :
   forall l,
@@ -732,15 +733,8 @@ Proof.
   as [| | | | w' th u p1' p2' Ho EQu EQw' EQth [EQp1' EQp2']| | |].
   clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
   destruct Ho as [Ho | Ho];
-  [left | right]; auto.
-  inversion Ho
-  as [| | |w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2'] | | | |].
-  clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
-  apply models_AND; auto.
-  inversion Hxv1
-  as [| |h t th u p1' Hv1 EQu EQht EQth EQp1'| | | | |].
-  clear th EQth u EQu p1' EQp1'.
-  now inversion Hv1.
+  [left | right];
+  try now inversion Ho.
   * (* v <> v3 -> ... *)
   assert (EQsv := sigma_equiv v v_neq_v3).
   now rewrite<- EQsv.
@@ -770,28 +764,39 @@ Proof.
   now unfold env_leq.
   apply models_is_monotonic with (u1 := Fpow_emp sigma2 (S l));
   try apply IHl.
-  apply Ho.
+  inversion Ho
+  as [| | | | | | |w' th u v' Hf].
+  unfold F in Hf.
+  rewrite (sigma_equiv v1 v1_neq_v3).
+  apply models_is_monotonic with (u1 := Fpow_emp sigma2 l);
+  try apply Hf.
+  apply Fpow_is_monotonic_1.
+
   -- inversion Ho
-  as [| | | w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
+  as [| | | | | | |w' th u v' Hf EQu EQw' EQth EQv'].
+  clear w' EQw' th EQth u EQu v' EQv'.
+  unfold F in Hf.
+  rewrite EQv2_2 in Hf.
+  inversion Hf
+  as [| | |w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
   clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
   apply models_AND; auto.
   inversion Hxv1
   as [| |h t th u p1' Hv1 EQu EQht EQth EQp1'| | | | |].
   clear th EQth u EQu p1' EQp1'.
-  clear Hx Ho Hxv1 Hp1 w EQht.
+  clear Hx Ho Hf Hxv1 Hp1 w EQht.
   apply models_X.
   rewrite<- EQv3_1.
+  apply models_is_monotonic with (u2 := Fpow_emp sigma2 (S l)) in Hv1;
+  try apply Fpow_is_monotonic_1.
   apply models_is_monotonic with (u2 := Fpow_emp sigma1 (S l)) in Hv1;
   try apply IHl.
   inversion Hv1
-  as [| | | | | | |t' th u v' Hf EQu EQt' EQth EQv'].
-  clear t' EQt' th EQth u EQu v' EQv'.
-  unfold Fpow_emp in Hf.
-  unfold Fpow in Hf.
-  unfold F at 1 in Hf.
-  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
-  auto.
-  apply Fpow_is_monotonic_1.
+  as [| | | | | | |w' th u v' Hf].
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l).
+  try apply Fpow_is_monotonic_1.
+  apply Hf.
+
   * (* v <> v3 -> ... *)
   assert (EQsv := sigma_equiv v v_neq_v3).
   rewrite<- EQsv.
@@ -834,7 +839,13 @@ Proof.
   clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
   destruct Ho as [Ho | Ho];
   [left | right];
-  try now apply models_is_monotonic with (u1 := Fpow_emp sigma1 l).
+  rewrite<- fpF_is_fixpoint;
+  apply models_var;
+  unfold F.
+  * rewrite<- (sigma_equiv v1 v1_neq_v3).
+  apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
+  auto.
+  * rewrite EQv2_2.
   inversion Ho
   as [| | | w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
   clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
@@ -846,7 +857,7 @@ Proof.
   clear Hx Ho Hxv1 Hp1 w h EQht.
 
   induction t as [| a t IHt].
-  * (* t = nil -> ... *)
+  -- (* t = nil -> ... *)
   inversion Hv1
   as [| | | | | |w th u p1' p2' Hu EQu EQw EQth [EQp1' EQp2']|].
   clear w EQw th EQth u EQu p1' EQp1' p2' EQp2'.
@@ -860,24 +871,32 @@ Proof.
   rewrite EQv3_2.
   apply models_OR.
   left.
+  rewrite<- fpF_is_fixpoint.
+  apply models_var.
+  unfold F.
+  rewrite<- (sigma_equiv v1 v1_neq_v3).
   apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
   auto.
-  * (* t = a::t -> ... *)
+  -- (* t = a::t -> ... *)
   rewrite U_equals_psi_or_phi_and_XU in Hv1.
   inversion Hv1
   as [| | | | w' th u p1' p2' Ho EQu EQw' EQth [EQp1' EQp2']| | |].
   clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
   destruct Ho as [Ho | Ho].
-  -- (* (a::t, theta |= Fpow_emp sigma1 l, psi1) -> ... *)
+  ++ (* (a::t, theta |= Fpow_emp sigma1 l, psi1) -> ... *)
   rewrite<- fpF_is_fixpoint.
   apply models_var.
   unfold F.
   rewrite EQv3_2.
   apply models_OR.
   left.
+  rewrite<- fpF_is_fixpoint.
+  apply models_var.
+  unfold F.
+  rewrite<- (sigma_equiv v1 v1_neq_v3).
   apply models_is_monotonic with (u1 := Fpow_emp sigma1 l);
   auto.
-  -- (* (a::t, theta |= Fpow_emp sigma1 l, X (phi1 U psi1) ./\ phi1) -> ... *)
+  ++ (* (a::t, theta |= Fpow_emp sigma1 l, X (phi1 U psi1) ./\ phi1) -> ... *)
   inversion Ho
   as [| | | w' th u p1' p2' Hxv1 Hp1 EQu EQw' EQth [EQp1' EQp2']| | | |].
   clear w' EQw' th EQth u EQu p1' EQp1' p2' EQp2'.
@@ -890,6 +909,10 @@ Proof.
   rewrite EQv3_2.
   apply models_OR.
   right.
+  rewrite<- fpF_is_fixpoint.
+  apply models_var.
+  unfold F.
+  rewrite EQv2_2.
   apply models_AND; auto.
   apply models_X.
   now apply IHt.
