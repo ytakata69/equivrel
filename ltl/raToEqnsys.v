@@ -161,6 +161,15 @@ Proof.
   apply Hdelta.
 Qed.
 
+Lemma q_disjunction_of_succ :
+  forall q : Q, disjunction_of_succ (deltaq q).
+Proof.
+  intros q.
+  destruct (finalRA_dec q) as [Hfq | Hnfq].
+  - now destruct (sigmaRA_q_final q Hfq).
+  - now destruct (sigmaRA_q_not_final q Hnfq).
+Qed.
+
 Lemma neq_to_cons_self {A : Type} :
   forall (a : A) (t : list A), t <> a :: t.
 Proof.
@@ -202,6 +211,20 @@ Qed.
 
 Section SigmaSimulatesRA.
 
+Lemma QVar_to_QDVar :
+  forall q theta w,
+  moveA sigmaRA (sigmaRA (QVar q), theta, w)
+                (sigmaRA (QDVar (deltaq q)), theta, w).
+Proof.
+  intros q theta w.
+  destruct (finalRA_dec q) as [Hfq | Hnfq];
+  [ destruct (sigmaRA_q_final q Hfq) as [Hsq Hdq']
+  | destruct (sigmaRA_q_not_final q Hnfq) as [Hsq Hdq'] ];
+  rewrite Hsq;
+  apply moveA_epsilon;
+  apply ruleA_OR_right.
+Qed.
+
 Lemma epsilon_move_of_sigmaRA_1 :
   forall q phi q' theta w,
   let r := (q, Σφ phi, reg_empty, q') in
@@ -211,46 +234,11 @@ Lemma epsilon_move_of_sigmaRA_1 :
 Proof.
   intros q phi q' theta w r Hin.
   assert (Hinq := delta_and_deltaq q (Σφ phi) reg_empty q' Hin).
+  assert (Hdq := q_disjunction_of_succ q).
+  apply moveA_star_trans
+  with (sigmaRA (QDVar (deltaq q)), theta, w).
+  { apply QVar_to_QDVar. }
 
-  destruct (finalRA_dec q) as [Hfq | Hnfq].
-  + (* finalRA q -> ... *)
-  destruct (sigmaRA_q_final q Hfq) as [Hsq Hdq].
-  rewrite Hsq.
-  apply moveA_star_trans
-  with (sigmaRA (QDVar (deltaq q)), theta, w).
-  { apply moveA_epsilon;
-  apply ruleA_OR_right. }
-  clear Hsq.
-  induction (deltaq q) as [| r' t IHt].
-  { now unfold In in Hinq. }
-  unfold In in Hinq.
-  destruct Hinq as [EQr | Hinq].
-  * (* r' = (q,...) -> ... *)
-  inversion Hdq as [| r'' t' Hsd Hdt [EQr'' EQt']].
-  clear r'' EQr'' t' EQt'.
-  rewrite Hsd.
-  rewrite EQr.
-  apply moveA_star_trans with (sigmaRA (RVar r), theta, w);
-  try apply moveA_star_ref.
-  apply moveA_epsilon.
-  apply ruleA_OR_left.
-  * (* In (q,...) t -> ... *)
-  inversion Hdq as [| r'' t' Hsd Hdt [EQr'' EQt']].
-  clear r'' EQr'' t' EQt'.
-  apply moveA_star_trans
-  with (sigmaRA (QDVar t), theta, w);
-  try now apply IHt.
-  rewrite Hsd.
-  apply moveA_epsilon.
-  apply ruleA_OR_right.
-  + (* ~ finalRA q -> ... *)
-  destruct (sigmaRA_q_not_final q Hnfq) as [Hsq Hdq].
-  rewrite Hsq.
-  apply moveA_star_trans
-  with (sigmaRA (QDVar (deltaq q)), theta, w).
-  { apply moveA_epsilon;
-  apply ruleA_OR_right. }
-  clear Hsq.
   induction (deltaq q) as [| r' t IHt].
   { now unfold In in Hinq. }
   unfold In in Hinq.
@@ -285,50 +273,16 @@ Proof.
   intros q phi q' theta w rg.
   intros r Hin.
   assert (Hinq := delta_and_deltaq q (Σφ phi) (reg rg) q' Hin).
-
-  destruct (finalRA_dec q) as [Hfq | Hnfq].
-  + (* finalRA q -> ... *)
-  destruct (sigmaRA_q_final q Hfq) as [Hsq Hdq].
-  rewrite Hsq.
+  assert (Hdq := q_disjunction_of_succ q).
   apply moveA_star_trans
   with (sigmaRA (QDVar (deltaq q)), theta, w).
-  { apply moveA_epsilon; apply ruleA_OR_right. }
-  clear Hsq.
+  { apply QVar_to_QDVar. }
+
   induction (deltaq q) as [| r' t IHt].
   { now unfold In in Hinq. }
   unfold In in Hinq.
   destruct Hinq as [EQr | Hinq].
   * (* r' = (q,...) -> ... *)
-  inversion Hdq as [| r'' t' Hsd Hdt [EQr'' EQt']].
-  clear r'' EQr'' t' EQt'.
-  rewrite Hsd.
-  rewrite EQr.
-  apply moveA_star_trans with (sigmaRA (RVar r), theta, w);
-  try apply moveA_star_ref.
-  apply moveA_epsilon.
-  apply ruleA_OR_left.
-  * (* In (q,...) t -> ... *)
-  inversion Hdq as [| r'' t' Hsd Hdt [EQr'' EQt']].
-  clear r'' EQr'' t' EQt'.
-  apply moveA_star_trans
-  with (sigmaRA (QDVar t), theta, w);
-  try now apply IHt.
-  rewrite Hsd.
-  apply moveA_epsilon.
-  apply ruleA_OR_right.
-  + (* ~ finalRA q -> ... *)
-  destruct (sigmaRA_q_not_final q Hnfq) as [Hsq Hdq].
-  rewrite Hsq.
-  apply moveA_star_trans
-  with (sigmaRA (QDVar (deltaq q)), theta, w).
-  { apply moveA_epsilon;
-  apply ruleA_OR_right. }
-  clear Hsq.
-  induction (deltaq q) as [| r' t IHt].
-  { now unfold In in Hinq. }
-  unfold In in Hinq.
-  destruct Hinq as [EQr | Hinq].
-  * (* r = (q,...) -> ... *)
   inversion Hdq as [| r'' t' Hsd Hdt [EQr'' EQt']].
   clear r'' EQr'' t' EQt'.
   rewrite Hsd.
