@@ -409,8 +409,8 @@ End UnusedVar.
 
 Section Normalization.
 
-Hypothesis var_eq_or_neq :
-  forall v1 v2 : V, v1 = v2 \/ v1 <> v2.
+Hypothesis Var_eq_dec :
+  forall v1 v2 : V, {v1 = v2} + {v1 <> v2}.
 
 Section NormalizeOr.
 
@@ -439,7 +439,7 @@ Proof.
   unfold F at 2.
   unfold env_leq.
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   + (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -492,7 +492,7 @@ Proof.
   unfold env_leq.
   rewrite<- (plus_n_Sm l l).
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   + (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -559,7 +559,7 @@ Proof.
   unfold F.
   unfold env_leq.
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   * (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -586,7 +586,7 @@ Proof.
   unfold F at 3.
   unfold env_leq.
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   * (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -646,7 +646,7 @@ Proof.
   unfold env_leq.
   rewrite<- (plus_n_Sm l l).
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   + (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -716,7 +716,7 @@ Proof.
   unfold F.
   unfold env_leq.
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   * (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -742,7 +742,7 @@ Proof.
   unfold F at 3.
   unfold env_leq.
   intros v theta w.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   * (* v = v3 -> ... *)
   rewrite v_eq_v3.
@@ -821,7 +821,7 @@ Proof.
   unfold Fpow.
   rewrite<- fpF_is_fixpoint.
   unfold F.
-  destruct (var_eq_or_neq v v3)
+  destruct (Var_eq_dec v v3)
   as [v_eq_v3 | v_neq_v3].
   + (* v = v3 -> ... *)
   rewrite v_eq_v3.
