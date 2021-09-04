@@ -573,7 +573,7 @@ Lemma moveA_star_can_be_split_at_QVar :
   exists c2,
     (exists q, match c2 with (q2, _, _) =>
                q2 = (sigmaRA (QVar q)) end) /\
-    moveA_star_without_QVar c1 c2 /\
+    moveA_plus_without_QVar c1 c2 /\
     moveA_star sigmaRA c2 c3.
 Proof.
   intros c1 c3 Hmo.
@@ -590,8 +590,7 @@ Proof.
   exists (q2, th, w').
   split; [| split]; auto.
   -- now exists q.
-  -- apply moveA_star_without_QVar_plus.
-  now apply moveA_plus_without_QVar_step.
+  -- now apply moveA_plus_without_QVar_step.
   * (* (forall q, q2 <> sigmaRA (QVar q)) -> ... *)
   left.
   inversion IH as [c3' EQc3' EQc3| c2 c3' IH' EQc2 EQc3];
@@ -607,16 +606,15 @@ Proof.
   exists (q2, th, w').
   split; [| split]; auto.
   -- now exists q.
-  -- apply moveA_star_without_QVar_plus.
-  now apply moveA_plus_without_QVar_step.
+  -- now apply moveA_plus_without_QVar_step.
   * (* (forall q, q2 <> sigmaRA (QVar q)) -> ... *)
   right.
   exists c2'.
   split; [| split]; auto.
-  inversion IH2 as [c3' EQc3' EQc3| c2 c3' IH' EQc2 EQc3];
-  apply moveA_star_without_QVar_plus.
-  -- now apply moveA_plus_without_QVar_step.
-  -- apply moveA_plus_without_QVar_trans
+  inversion IH2
+  as [c2'' c2 H23' EQc2'' EQc2
+     |c2'' c2 c3' Hc2 H23' H23'' EQc2 EQc3];
+  apply moveA_plus_without_QVar_trans
   with (q2, th, w'); auto.
 Qed.
 
