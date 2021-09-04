@@ -77,7 +77,13 @@ Definition update
   (theta : Theta) (i : register) (d : D) : Theta :=
   fun (r : register) => if r =? i then d else theta r.
 
+Definition theta_bot : Theta :=
+  fun (r : register) => 0.
+
 Definition Env := V -> Theta -> data_word -> Prop.
+
+Definition empty_env : Env :=
+  fun (v : V) (theta : Theta) (w : data_word) => False.
 
 Definition models_atom
   (w : data_word) (theta : Theta) (atom : ltl_atom)
@@ -548,3 +554,20 @@ Proof.
 Qed.
 
 End GandF.
+
+Lemma ff_neq_end :
+  (φ ~[tt]) <> φ [END].
+Proof.
+  intros H.
+  assert (H1 : ~ (nil, theta_bot |= empty_env, φ ~[tt])).
+  { intros Hff.
+  inversion Hff as [w th u' phi Hphi EQu' EQw EQth EQphi| | | | | | |].
+  unfold models_phi in Hphi.
+  now unfold models_atom in Hphi. }
+  assert (H2 : (nil, theta_bot |= empty_env, φ [END])).
+  { apply models_PHI.
+  unfold models_phi.
+  now unfold models_atom. }
+  rewrite <- H in H2.
+  now apply H1 in H2.
+Qed.

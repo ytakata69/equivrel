@@ -4,10 +4,6 @@ Require Import mu.
 
 Definition eqn_sys := V -> ltl.  (* the set of equation systems *)
 
-(* the environment that assigns the empty set to every variable *)
-Definition empty_env : Env :=
-  fun (v : V) (theta : Theta) (w : data_word) => False.
-
 (* The transformation from Env to Env *)
 Definition F (sigma : eqn_sys) (env : Env) : Env :=
   fun (v : V) (theta : Theta) (w : data_word) =>
