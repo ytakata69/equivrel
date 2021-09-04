@@ -170,6 +170,81 @@ Proof.
   - now destruct (sigmaRA_q_not_final q Hnfq).
 Qed.
 
+Lemma sigmaRA_QVar :
+  forall q,
+  let Vd := QDVar (deltaq q) in
+  sigmaRA (QVar q) = (var Vend .\/ var Vd) \/
+  sigmaRA (QVar q) = (var Vd .\/ var Vd).
+Proof.
+  intros q.
+  destruct (finalRA_dec q) as [Hfq | Hnfq].
+  - left. apply (sigmaRA_q_final q Hfq).
+  - right. apply (sigmaRA_q_not_final q Hnfq).
+Qed.
+
+Lemma sigmaRA_RVar :
+  forall r,
+  sigmaRA (RVar r) = (φ ~[tt]) \/
+  (exists q phi,
+   sigmaRA (RVar r) = ((X (var (QVar q))) ./\ phi)) \/
+  (exists rg q phi,
+   sigmaRA (RVar r) = ((↓ rg, X (var (QVar q))) ./\ phi)).
+Proof.
+  intros r.
+  destruct r as [[[q1 a] rg] q2].
+  assert (Hr := sigmaRA_r (q1, a, rg, q2)).
+  destruct a as [| phi].
+  - (* a = epsilon -> ... *)
+  now left.
+  - (* a = Σφ phi -> ... *)
+  destruct rg as [| rg].
+  + (* rg = reg_empty -> ... *)
+  right; left.
+  now exists q2; exists phi.
+  + (* rg = reg rg -> ... *)
+  right; right.
+  now exists rg; exists q2; exists phi.
+Qed.
+
+Lemma sigmaRA_QDVar :
+  forall l,
+  disjunction_of_succ l ->
+  sigmaRA (QDVar l) = (φ ~[tt]) \/
+  (exists v1 v2,
+   sigmaRA (QDVar l) = (var v1 .\/ var v2)).
+Proof.
+  intros l H.
+  inversion H as [| r t].
+  - now left.
+  - right.
+  exists (RVar r).
+  now exists (QDVar t).
+Qed.
+
+Lemma sigmaRA_RVar_neq_end :
+  forall r, sigmaRA (RVar r) <> (φ [END]).
+Proof.
+  intros r.
+  destruct (sigmaRA_RVar r)
+  as [EQsr | [[q [phi EQsr]] | [rg [q [phi EQsr]]]]];
+  rewrite EQsr.
+  - now apply ff_neq_end.
+  - discriminate.
+  - discriminate.
+Qed.
+
+Lemma sigmaRA_QDVar_neq_end :
+  forall l,
+  disjunction_of_succ l ->
+  sigmaRA (QDVar l) <> (φ [END]).
+Proof.
+  intros l Hd.
+  destruct (sigmaRA_QDVar l) as [EQsd | [v1 [v2 EQsd]]];
+  try rewrite EQsd; try apply Hd.
+  - now apply ff_neq_end.
+  - discriminate.
+Qed.
+
 Lemma neq_to_cons_self {A : Type} :
   forall (a : A) (t : list A), t <> a :: t.
 Proof.
@@ -465,12 +540,67 @@ Inductive moveA_star_without_QVar
   | moveA_star_without_QVar_trans :
     forall c1 c2 c3 : Config,
     (forall q,
-     match c2 with (q1, _, _) =>
-       (q1 <> (sigmaRA (QVar q))) end) ->
+     match c2 with (q2, _, _) =>
+       (q2 <> (sigmaRA (QVar q))) end) ->
     moveA sigmaRA c1 c2 ->
     moveA_star_without_QVar c2 c3 ->
     moveA_star_without_QVar c1 c3
+  | moveA_star_without_QVar_step :
+    forall c1 c2,
+    moveA sigmaRA c1 c2 ->
+    moveA_star_without_QVar c1 c2
   .
+
+Axiom sigmaRA_QVar_dec :
+  forall q',
+  {exists q, q' = (sigmaRA (QVar q))} +
+  {forall q, q' <> (sigmaRA (QVar q))}.
+
+Lemma moveA_star_can_be_split_at_QVar :
+  forall c1 c3,
+  moveA_star sigmaRA c1 c3 ->
+  moveA_star_without_QVar c1 c3 \/
+  exists c2,
+    (exists q, match c2 with (q2, _, _) =>
+               q2 = (sigmaRA (QVar q)) end) /\
+    moveA_star_without_QVar c1 c2 /\
+    moveA_star sigmaRA c2 c3.
+Proof.
+  intros c1 c3 Hmo.
+  induction Hmo as [c1 | c1 c2 c3 H12 H23 IH].
+  - (* zero step *)
+  left. apply moveA_star_without_QVar_ref.
+  - (* one or more steps *)
+  destruct IH as [IH | [c2' [IH1 [IH2 IH3]]]].
+  + (* moveA_star_without_QVar c2 c3 -> ... *)
+  destruct c2 as [[q2 th] w'].
+  destruct (sigmaRA_QVar_dec q2) as [[q Hq2] | Hq2].
+  * (* q2 = sigmaRA (QVar q) -> ... *)
+  right.
+  exists (q2, th, w').
+  split; [| split]; auto.
+  -- now exists q.
+  -- now apply moveA_star_without_QVar_step.
+  * (* (forall q, q2 <> sigmaRA (QVar q)) -> ... *)
+  left.
+  apply moveA_star_without_QVar_trans
+  with (q2, th, w'); auto.
+  + (* exists c2', moveA_star_without_QVar c2 c2' /\ ... -> ... *)
+  destruct c2 as [[q2 th] w'].
+  destruct (sigmaRA_QVar_dec q2) as [[q Hq2] | Hq2].
+  * (* q2 = sigmaRA (QVar q) -> ... *)
+  right.
+  exists (q2, th, w').
+  split; [| split]; auto.
+  -- now exists q.
+  -- now apply moveA_star_without_QVar_step.
+  * (* (forall q, q2 <> sigmaRA (QVar q)) -> ... *)
+  right.
+  exists c2'.
+  split; [| split]; auto.
+  apply moveA_star_without_QVar_trans
+  with (q2, th, w'); auto.
+Qed.
 
 Lemma RVar_to_end_without_QVar :
   forall r theta w theta',
@@ -481,46 +611,48 @@ Proof.
   intros r theta w theta' H.
   inversion H
   as [c1 EQc1 [EQsr EQtheta EQw]
-     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3];
-  destruct r as [[[q1 a] rg] q2].
+     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3
+     |c1 c2 H12 EQc1 EQc2].
   - (* sigmaRA (RVar r) = φ [END] -> ... *)
-  rewrite (sigmaRA_r (q1, a, rg, q2)) in EQsr.
-  destruct a as [| phi].
-  + now assert (Hdis := ff_neq_end EQsr).
-  + destruct rg; discriminate.
+  now apply sigmaRA_RVar_neq_end in EQsr.
   - (* moveA ... (sigmaRA (RVar r), ...) c2 -> ... *)
-  rewrite (sigmaRA_r (q1, a, rg, q2)) in H12.
-  destruct a as [| phi].
-  + (* moveA ... (φ ~[tt], theta, w) c2 -> ... *)
+  destruct (sigmaRA_RVar r)
+  as [EQsr' | [[q [phi EQsr']] | [rg [q [phi EQsr']]]]];
+  rewrite EQsr' in H12;
   inversion H12
   as [q1' q2' th w' Hr [EQq1 EQth EQw'] EQq2
-     |q1' q2' phi th h t Hr Hphi [EQq1 EQth EQht] EQq2
-     |q1' q2' phi rg' th h t Hr Hphi [EQq1 EQth EQht] EQq2];
-  inversion Hr as [phi' EQphi' EQphi EQr EQq2'| | | |].
-  rewrite <- EQphi in Hphi.
+     |q1' q2' phi' th h t Hr Hphi [EQq1 EQth EQht] EQq2
+     |q1' q2' phi' rg' th h t Hr Hphi [EQq1 EQth EQht] EQq2];
+  inversion Hr
+  as [phi'' EQphi'' EQphi' EQr EQq2' | |
+     |v phi'' [EQv EQphi''] EQphi' EQr EQq2'
+     |r' v phi'' [EQr' EQv EQphi''] EQphi' EQr EQq2'].
+  + (* sigmaRA (RVar r) = φ ~[tt] -> ... *)
+  rewrite <- EQphi' in Hphi.
   unfold models_phi in Hphi.
   now unfold models_atom in Hphi.
-  + destruct rg.
-  * (* moveA ... (X (var (QVar q2)) ...) c2 -> ... *)
+  + (* sigmaRA (RVar r) = X ... -> ... *)
+  rewrite <- EQq2' in EQq2.
+  rewrite <- EQq2 in Hc2.
+  now apply (Hc2 q).
+  + (* sigmaRA (RVar r) = ↓ rg, X ... -> ... *)
+  rewrite <- EQq2' in EQq2.
+  rewrite <- EQq2 in Hc2.
+  now apply (Hc2 q).
+  - (* c2 = (φ [END], theta', nil) -> ... *)
+  destruct (sigmaRA_RVar r)
+  as [EQsr' | [[q [phi EQsr']] | [rg [q [phi EQsr']]]]];
+  rewrite EQsr' in H12;
   inversion H12
   as [q1' q2' th w' Hr [EQq1 EQth EQw'] EQq2
      |q1' q2' phi' th h t Hr Hphi [EQq1 EQth EQht] EQq2
      |q1' q2' phi' rg' th h t Hr Hphi [EQq1 EQth EQht] EQq2];
-  inversion Hr as [| | |v phi'' [EQv EQphi''] EQphi' EQr EQq2' |].
-  clear v EQv phi'' EQphi'' EQr.
-  rewrite <- EQq2' in EQq2.
-  rewrite <- EQq2 in Hc2.
-  now apply (Hc2 q2).
-  * (* moveA ... (↓ r, X (var (QVar q2)) ...) c2 -> ... *)
-  inversion H12
-  as [q1' q2' th w' Hr [EQq1 EQth EQw'] EQq2
-     |q1' q2' phi' th h t Hr Hphi [EQq1 EQth EQht] EQq2
-     |q1' q2' phi' rg' th h t Hr Hphi [EQq1 EQth EQht] EQq2];
-  inversion Hr as [| | | |r'' v phi'' [EQr'' EQv EQphi''] EQphi' EQr EQq2'].
-  clear r'' EQr'' v EQv phi'' EQphi''.
-  rewrite <- EQq2' in EQq2.
-  rewrite <- EQq2 in Hc2.
-  now apply (Hc2 q2).
+  inversion Hr
+  as [| | |v phi'' [EQv EQphi''] EQphi' EQr EQq2'
+     |r' v phi'' [EQr' EQv EQphi''] EQphi' EQr EQq2'];
+  destruct (sigmaRA_QVar q) as [Hsq | Hsq];
+  rewrite Hsq in EQq2';
+  discriminate.
 Qed.
 
 Lemma QDVar_to_end_without_QVar :
@@ -530,17 +662,15 @@ Lemma QDVar_to_end_without_QVar :
     (φ [END], theta', nil).
 Proof.
   intros q theta w theta' H.
-  assert (Hd : disjunction_of_succ (deltaq q)).
-  { destruct (finalRA_dec q) as [Hfq | Hnfq].
-  - now destruct (sigmaRA_q_final q Hfq).
-  - now destruct (sigmaRA_q_not_final q Hnfq). }
+  assert (Hd := q_disjunction_of_succ q).
 
   induction (deltaq q) as [| r t IHt];
   inversion Hd as [EQsd|r' t' EQsd Hdt [EQr' EQt']].
   + (* deltaq q = nil -> ... *)
   inversion H
   as [c1 EQc1 [EQsd' EQtheta EQw]
-     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3].
+     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3
+     |c1 c2 H12 EQc1 EQc2].
   * (* sigmaRA (QDVar (deltaq q)) = (φ [END]) -> ... *)
   rewrite EQsd in EQsd'.
   now apply ff_neq_end in EQsd'.
@@ -554,11 +684,19 @@ Proof.
   rewrite <- EQphi in Hphi.
   unfold models_phi in Hphi.
   now unfold models_atom in Hphi.
+  * (* c2 = (φ [END], theta', nil) -> ... *)
+  rewrite EQsd in H12.
+  inversion H12
+  as [q1 q2 th w' Hr [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi th h t Hr Hphi [EQq1 EQth EQht] EQq2
+     |q1 q2 phi rg th h t Hr Hphi [EQq1 EQth EQht] EQq2];
+  inversion Hr.
   + (* deltaq q = r :: t -> ... *)
   clear r' EQr' t' EQt'.
   inversion H
   as [c1 EQc1 [EQsd' EQtheta EQw]
-     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3].
+     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3
+     |c1 c2 H12 EQc1 EQc2].
   * (* sigmaRA (QDVar (deltaq q)) = (φ [END]) -> ... *)
   rewrite EQsd in EQsd'.
   discriminate.
@@ -578,6 +716,20 @@ Proof.
   now apply RVar_to_end_without_QVar in H23.
   -- (* c2 = (sigmaRA (QDVar t), ...) -> ... *)
   now apply IHt.
+  * (* c2 = (φ [END], theta', nil) -> ... *)
+  rewrite EQsd in H12.
+  inversion H12
+  as [q1 q2 th w' Hr [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi th h t' Hr Hphi [EQq1 EQth EQht] EQq2
+     |q1 q2 phi rg th h t' Hr Hphi [EQq1 EQth EQht] EQq2];
+  inversion Hr
+  as [|v1 v2 [EQv1 EQv2] EQe EQr EQq2'
+      |v1 v2 [EQv1 EQv2] EQe EQr EQq2'| |];
+  clear v1 EQv1 v2 EQv2 EQe EQr.
+  -- (* c2 = (sigmaRA (RVar r), ...) -> ... *)
+  now apply sigmaRA_RVar_neq_end in EQq2'.
+  -- (* c2 = (sigmaRA (QDVar t), ...) -> ... *)
+  now apply sigmaRA_QDVar_neq_end in EQq2'.
 Qed.
 
 Lemma RA_simulates_sigmaRA_end :
@@ -588,7 +740,8 @@ Proof.
   intros q theta w theta' Hmo.
   inversion Hmo
   as [c1 EQc1 [Hsq EQth EQw]
-     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3].
+     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3
+     |c1 c2 H12 EQc1 EQc2].
   - (* sigmaRA (QVar q) = φ [END] -> ... *)
   destruct (finalRA_dec q) as [Hfq | Hnfq];
   try apply Hfq.
@@ -610,6 +763,19 @@ Proof.
   rewrite <- EQq2' in EQq2;
   rewrite <- EQq2 in H23;
   now apply QDVar_to_end_without_QVar in H23.
+  - (* c2 = (φ [END], theta', nil) -> ... *)
+  destruct (finalRA_dec q) as [Hfq | Hnfq];
+  try apply Hfq.
+  destruct (sigmaRA_q_not_final q Hnfq) as [Hsq Hd].
+  rewrite Hsq in H12.
+  inversion H12
+  as [q1 q2 th w' Hr [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi th h t Hr Hphi [EQq1 EQth EQht] EQq2
+     |q1 q2 phi r th h t Hr Hphi [EQq1 EQth EQht] EQq2];
+  inversion Hr
+  as [|v1 v2 [EQv1 EQv2] EQe EQr EQq2'
+      |v1 v2 [EQv1 EQv2] EQe EQr EQq2' | |];
+  now apply (sigmaRA_QDVar_neq_end (deltaq q) Hd) in EQq2'.
 Qed.
 
 End RASimulatesSigma.
