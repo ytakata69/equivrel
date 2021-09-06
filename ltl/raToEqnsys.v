@@ -425,33 +425,6 @@ Proof.
   now apply n_Sn in Hl.
 Qed.
 
-Lemma moveA_star_mid :
-  forall sigma q1 q2 q3,
-  moveA_star sigma q1 q2 ->
-  moveA_star sigma q2 q3 ->
-  moveA_star sigma q1 q3.
-Proof.
-  intros sigma q1 q2 q3.
-  intros H12 H23.
-  induction H12 as [| q1 q2 q3' H12 H23' IH];
-  auto.
-  apply moveA_star_trans with q2;
-  now try apply IH.
-Qed.
-
-Lemma moveA_star_last :
-  forall sigma q1 q2 q3,
-  moveA_star sigma q1 q2 ->
-  moveA sigma q2 q3 ->
-  moveA_star sigma q1 q3.
-Proof.
-  intros sigma q1 q2 q3 H12 H23.
-  apply moveA_star_mid with q2; auto.
-  apply moveA_star_trans with q3;
-  try apply moveA_star_ref.
-  apply H23.
-Qed.
-
 (* sigmaRA simulates moveRA *)
 
 Section SigmaSimulatesRA.
@@ -593,7 +566,7 @@ Proof.
   clear w' EQw theta' EQth q2 EQq2 Heqy.
   assert (Hep := epsilon_move_of_sigmaRA_1
                  q phi q' theta (h::t) Hin).
-  apply moveA_star_last
+  apply moveA_star_is_transitive_at_last
   with (sigmaRA (RVar (q, Σφ phi, reg_empty, q')), theta, h::t);
   try apply Hep.
   rewrite sigmaRA_r.
@@ -613,7 +586,7 @@ Proof.
   clear w' EQw theta' EQth q2 EQq2 Heqy.
   assert (Hep := epsilon_move_of_sigmaRA_2
                  q phi q' theta (h::t) rg Hin).
-  apply moveA_star_last
+  apply moveA_star_is_transitive_at_last
   with (sigmaRA (RVar (q, Σφ phi, reg rg, q')), theta, h::t);
   try apply Hep.
   rewrite sigmaRA_r.
@@ -663,7 +636,7 @@ Proof.
   symmetry in EQq2.
   apply moveRA_epsilon with (theta := theta) (w := w)
   in Hin as Hmo.
-  apply moveA_star_mid with (sigmaRA (QVar q2), theta, w).
+  apply moveA_star_is_transitive with (sigmaRA (QVar q2), theta, w).
   * now apply sigmaRA_simulates_one_moveRA.
   * now apply IH'.
   + (* moveRA (q1, theta, h::t) (q2, theta, t) -> ... *)
@@ -678,7 +651,7 @@ Proof.
   symmetry in EQq2.
   apply moveRA_not_update with (theta:=theta) (h:=h) (t:=t)
   in Hin as Hmo; auto.
-  apply moveA_star_mid with (sigmaRA (QVar q2), theta, t).
+  apply moveA_star_is_transitive with (sigmaRA (QVar q2), theta, t).
   * now apply sigmaRA_simulates_one_moveRA.
   * now apply IH'.
   + (* moveRA (q1, theta, h::t) (q2, update theta ..., t) -> ... *)
@@ -693,7 +666,7 @@ Proof.
   symmetry in EQq2.
   apply moveRA_update with (theta:=theta) (a:=h) (t:=t)
   in Hin as Hmo; auto.
-  apply moveA_star_mid with (sigmaRA (QVar q2), update theta r (snd h), t).
+  apply moveA_star_is_transitive with (sigmaRA (QVar q2), update theta r (snd h), t).
   * now apply sigmaRA_simulates_one_moveRA.
   * now apply IH'.
 Qed.

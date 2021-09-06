@@ -84,6 +84,33 @@ Inductive finalA
     finalA (φ p1) -> finalA (φ p2) -> finalA (φ p1 ../\ p2)
   .
 
+Lemma moveA_star_is_transitive :
+  forall sigma c1 c2 c3,
+  moveA_star sigma c1 c2 ->
+  moveA_star sigma c2 c3 ->
+  moveA_star sigma c1 c3.
+Proof.
+  intros sigma c1 c2 c3.
+  intros H12 H23.
+  induction H12 as [| c1 c2 c3' H12 H23' IH];
+  auto.
+  apply moveA_star_trans with c2;
+  now try apply IH.
+Qed.
+
+Lemma moveA_star_is_transitive_at_last :
+  forall sigma c1 c2 c3,
+  moveA_star sigma c1 c2 ->
+  moveA sigma c2 c3 ->
+  moveA_star sigma c1 c3.
+Proof.
+  intros sigma c1 c2 c3 H12 H23.
+  apply moveA_star_is_transitive with c2; auto.
+  apply moveA_star_trans with c3;
+  try apply moveA_star_ref.
+  apply H23.
+Qed.
+
 Lemma tt_loop_exists :
   forall sigma theta w,
   moveA_star sigma (φ [tt], theta, w) (φ [tt], theta, nil).
