@@ -1077,7 +1077,8 @@ Proof.
   assert (EQsr := sigmaRA_r r).
   destruct r as [[[q a] rg] q''].
   destruct a as [|phi].
-  - rewrite EQsr in Hmo.
+  - (* a = epsilon -> ... *)
+  rewrite EQsr in Hmo.
   inversion Hmo
   as [c1 c2 H12 EQc1 EQc2
      |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3];
@@ -1091,80 +1092,65 @@ Proof.
   unfold models_phi in Hphi;
   now unfold models_atom in Hphi.
 
-  - destruct rg as [| rg].
-  + rewrite EQsr in Hmo;
+  - (* a = Σφ phi -> ... *)
+  assert (Htriv : sigmaRA (QVar q'') = sigmaRA (QVar q'')).
+  { trivial. }
+  destruct rg as [| rg];
+  rewrite EQsr in Hmo;
   inversion Hmo
   as [c1 c2 H12 EQc1 EQc2
      |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3];
   inversion H12
   as [q1 q2 th w'' Hr (*[EQq1 EQth EQw'] EQq2*)
      |q1 q2 phi' th h t Hr Hphi [EQq1 EQth EQht] EQq2
-     |q1 q2 phi' r' th h t Hr (*Hphi [EQq1 EQth EQht] EQq2*)];
-  inversion Hr
-  as [(*phi'' EQphi'' EQphi EQr EQsq'*)
-     |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
-     |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
-     |v1 phi'' [EQv1 EQphi''] EQphi EQr EQq2'|].
-  * clear EQr v1 EQv1.
-  rewrite <- EQphi in Hphi.
-  apply moveRA_not_update with phi; auto.
-  assert (Hsq'sq'' := EQq2').
-  apply sigmaRA_QVar_is_injective in EQq2'.
-  destruct EQq2' as [[dq''nil dq'nil] | EQq2'].
-  -- apply (at_most_one_dead_end_state q'' q' dq''nil) in dq'nil.
-  ++ now rewrite <- dq'nil.
-  ++
-  destruct (finalRA_dec q') as [Hfq' | Hnfq'];
-  [ destruct (sigmaRA_q_final q' Hfq') as [Hsq' Hd']
-  | destruct (sigmaRA_q_not_final q' Hnfq') as [Hsq' Hd'] ];
-  destruct (finalRA_dec q'') as [Hfq'' | Hnfq''];
-  [ destruct (sigmaRA_q_final q'' Hfq'') as [Hsq'' Hd'']
-  | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd'']
-  | destruct (sigmaRA_q_final q'' Hfq'') as [Hsq'' Hd'']
-  | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd''] ].
-  ** split; auto.
-  ** rewrite Hsq' in Hsq'sq''.
-  rewrite Hsq'' in Hsq'sq''.
-  injection Hsq'sq''.
-  intros _ He.
-  now apply QDVar_is_not_Vend in He.
-  ** rewrite Hsq' in Hsq'sq''.
-  rewrite Hsq'' in Hsq'sq''.
-  injection Hsq'sq''.
-  intros _ He.
-  symmetry in He.
-  now apply QDVar_is_not_Vend in He.
-  ** split; intros Hf;
-  [apply Hnfq'' in Hf | apply Hnfq' in Hf];
-  contradiction.
-  -- now rewrite <- EQq2'.
-  * rewrite <- EQq2' in EQq2.
-  rewrite <- EQq2 in Hc2.
-  assert (Htriv : sigmaRA (QVar q'') = sigmaRA (QVar q'')).
-  { trivial. }
-  now apply (Hc2 q'') in Htriv.
-
-  + rewrite EQsr in Hmo;
-  inversion Hmo
-  as [c1 c2 H12 EQc1 EQc2
-     |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3];
-  inversion H12
-  as [q1 q2 th w'' Hr (*[EQq1 EQth EQw'] EQq2*)
-     |q1 q2 phi' th h t Hr (*Hphi [EQq1 EQth EQht] EQq2*)
      |q1 q2 phi' r' th h t Hr Hphi [EQq1 EQth EQht] EQq2];
   inversion Hr
   as [(*phi'' EQphi'' EQphi EQr EQsq'*)
      |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
      |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
-     |(*v1 phi'' [EQv1 EQphi''] EQphi EQr EQq2'*)
-     |rg' v1 phi'' [EQrg' EQv1 EQphi''] EQphi EQr EQq2'].
-  * rewrite <- EQphi in Hphi.
-  rewrite <- EQr.
-  apply moveRA_update with phi; auto.
-  assert (Hsq'sq'' := EQq2').
+     |v1 phi'' [EQv1 EQphi''] EQphi EQr EQq2'
+     |rg' v1 phi'' [EQrg' EQv1 EQphi''] EQphi EQrg EQq2'];
+  clear v1 EQv1;
+  rewrite <- EQphi in Hphi;
+  try apply moveRA_not_update with phi;
+  try apply moveRA_update with phi; auto;
+  assert (Hsq'sq'' := EQq2');
+  rewrite <- EQq2' in EQq2;
+  try (rewrite <- EQq2 in Hc2;
+  now apply (Hc2 q'') in Htriv);
   apply sigmaRA_QVar_is_injective in EQq2'.
-  destruct EQq2' as [[Hdq'' Hdq'] | EQq2'].
-  -- rewrite (at_most_one_dead_end_state q' q'' Hdq' Hdq''); auto.
+
+  + (* not update *)
+  destruct EQq2' as [[dq''nil dq'nil] | EQq2'];
+  try apply (at_most_one_dead_end_state q'' q' dq''nil) in dq'nil;
+  try now rewrite <- dq'nil.
+  * destruct (finalRA_dec q') as [Hfq' | Hnfq'];
+  [ destruct (sigmaRA_q_final q' Hfq') as [Hsq' Hd']
+  | destruct (sigmaRA_q_not_final q' Hnfq') as [Hsq' Hd'] ];
+  destruct (finalRA_dec q'') as [Hfq'' | Hnfq''];
+  [ destruct (sigmaRA_q_final q'' Hfq'') as [Hsq'' Hd'']
+  | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd'']
+  | destruct (sigmaRA_q_final q'' Hfq'') as [Hsq'' Hd'']
+  | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd''] ];
+  rewrite Hsq' in Hsq'sq'';
+  rewrite Hsq'' in Hsq'sq''.
+  ** split; auto.
+  ** injection Hsq'sq''; intros _ He;
+  now apply QDVar_is_not_Vend in He.
+  ** injection Hsq'sq''; intros _ He;
+  symmetry in He;
+  now apply QDVar_is_not_Vend in He.
+  ** split; intros Hf;
+  [apply Hnfq'' in Hf | apply Hnfq' in Hf];
+  contradiction.
+  * now rewrite <- EQq2'.
+
+  + (* update *)
+  rewrite <- EQrg;
+  destruct EQq2' as [[Hdq'' Hdq'] | EQq2'];
+  try rewrite (at_most_one_dead_end_state q' q'' Hdq' Hdq'');
+  auto;
+  try now rewrite <- EQq2'.
   destruct (finalRA_dec q') as [Hfq' | Hnfq'];
   [ destruct (sigmaRA_q_final q' Hfq') as [Hsq' Hd']
   | destruct (sigmaRA_q_not_final q' Hnfq') as [Hsq' Hd'] ];
@@ -1172,28 +1158,18 @@ Proof.
   [ destruct (sigmaRA_q_final q'' Hfq'') as [Hsq'' Hd'']
   | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd'']
   | destruct (sigmaRA_q_final q'' Hfq'') as [Hsq'' Hd'']
-  | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd''] ].
+  | destruct (sigmaRA_q_not_final q'' Hnfq'') as [Hsq'' Hd''] ];
+  rewrite Hsq' in Hsq'sq'';
+  rewrite Hsq'' in Hsq'sq''.
   ** split; auto.
-  ** rewrite Hsq' in Hsq'sq''.
-  rewrite Hsq'' in Hsq'sq''.
-  injection Hsq'sq''.
-  intros _ He.
+  ** injection Hsq'sq''; intros _ He;
   now apply QDVar_is_not_Vend in He.
-  ** rewrite Hsq' in Hsq'sq''.
-  rewrite Hsq'' in Hsq'sq''.
-  injection Hsq'sq''.
-  intros _ He.
-  symmetry in He.
+  ** injection Hsq'sq''; intros _ He;
+  symmetry in He;
   now apply QDVar_is_not_Vend in He.
   ** split; intros Hf;
   [apply Hnfq' in Hf | apply Hnfq'' in Hf];
   contradiction.
-  -- now rewrite <- EQq2'.
-  * rewrite <- EQq2' in EQq2.
-  rewrite <- EQq2 in Hc2.
-  assert (Htriv : sigmaRA (QVar q'') = sigmaRA (QVar q'')).
-  { trivial. }
-  now apply (Hc2 q'') in Htriv.
 Qed.
 
 Lemma QDVar_to_QVar_one_step :
