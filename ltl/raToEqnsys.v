@@ -1012,16 +1012,17 @@ Qed.
 
 Lemma RVar_to_QVar_one_step :
   forall r theta w q' theta' w',
-  In r delta -> deltaq q' <> nil ->
+  In r delta ->
   moveA_plus_without_QVar
     (sigmaRA (RVar r), theta, w)
     (sigmaRA (QVar q'), theta', w') ->
+  exists q'', sigmaRA (QVar q') = sigmaRA (QVar q'') /\
   match r with (q, _, _, _) =>
-  moveRA (q, theta, w) (q', theta', w')
+  moveRA (q, theta, w) (q'', theta', w')
   end.
 Proof.
   intros r theta w q' theta' w'.
-  intros Hin Hdq Hmo.
+  intros Hin Hmo.
   assert (EQsr := sigmaRA_r r).
   destruct r as [[[q a] rg] q''].
   destruct a as [|phi].
@@ -1052,12 +1053,9 @@ Proof.
      |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
      |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
      |v1 phi'' [EQv1 EQphi''] EQphi EQr EQq2'|].
-  * rewrite <- EQphi in Hphi.
+  * exists q''. split; auto.
+  rewrite <- EQphi in Hphi.
   apply moveRA_not_update with phi; auto.
-  apply sigmaRA_QVar_is_injective in EQq2'.
-  destruct EQq2' as [[Hdq'' Hdq'] | EQq2'];
-  try now apply Hdq in Hdq'.
-  now rewrite <- EQq2'.
   * rewrite<- EQq2' in EQq2.
   rewrite<- EQq2 in Hc2.
   now assert (Hc2' := Hc2 q'').
@@ -1075,13 +1073,10 @@ Proof.
      |(*v1 v2 [EQv1 EQv2] EQe EQr EQq2'*)
      |(*v1 phi'' [EQv1 EQphi''] EQphi EQr EQq2'*)
      |rg' v1 phi'' [EQrg' EQv1 EQphi''] EQphi EQr EQq2'].
-  * rewrite <- EQphi in Hphi.
+  * exists q''. split; auto.
+  rewrite <- EQphi in Hphi.
   rewrite <- EQr.
   apply moveRA_update with phi; auto.
-  apply sigmaRA_QVar_is_injective in EQq2'.
-  destruct EQq2' as [[Hdq'' Hdq'] | EQq2'];
-  try now apply Hdq in Hdq'.
-  now rewrite <- EQq2'.
   * rewrite<- EQq2' in EQq2.
   rewrite<- EQq2 in Hc2.
   now assert (Hc2' := Hc2 q'').
@@ -1091,14 +1086,14 @@ Lemma QDVar_to_QVar_one_step :
   forall q r t theta w q' theta' w',
   disjunction_of_succ (r :: t) ->
   Forall (fun r => In r (deltaq q)) (r :: t) ->
-  deltaq q' <> nil ->
   moveA_plus_without_QVar
     (sigmaRA (QDVar (r :: t)), theta, w)
     (sigmaRA (QVar q'), theta', w') ->
-  moveRA (q, theta, w) (q', theta', w').
+  exists q'', sigmaRA (QVar q') = sigmaRA (QVar q'') /\
+  moveRA (q, theta, w) (q'', theta', w').
 Proof.
   intros q r t theta w q' theta' w'.
-  intros Hdrt Hin Hdq' Hmo.
+  intros Hdrt Hin Hmo.
   induction (r :: t) as [| r' t' IHt'].
   - inversion Hdrt as [EQsd|].
   rewrite EQsd in Hmo.
@@ -1222,14 +1217,14 @@ Qed.
 
 Theorem RA_simulates_sigmaRA_one_step :
   forall q theta w q' theta' w',
-  deltaq q' <> nil ->
   moveA_plus_without_QVar
     (sigmaRA (QVar q), theta, w)
     (sigmaRA (QVar q'), theta', w') ->
-  moveRA (q, theta, w) (q', theta', w').
+  exists q'', sigmaRA (QVar q') = sigmaRA (QVar q'') /\
+  moveRA (q, theta, w) (q'', theta', w').
 Proof.
   intros q theta w q' theta' w'.
-  intros Hdq' Hmo.
+  intros Hmo.
   assert (Hdq := q_disjunction_of_succ q).
   inversion Hmo
   as [c1 c2 H12 EQc1 EQc2
