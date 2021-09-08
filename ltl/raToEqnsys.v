@@ -2,7 +2,7 @@ Require Import mu.
 Require Import eqnSys.
 Require Import automata.
 
-(* Definition of an RA *)
+(*** Definition of an RA ***)
 
 Parameter Q : Type.
 
@@ -41,12 +41,7 @@ Inductive moveRA_star
 
 Parameter finalRA : Q -> Prop.
 
-Axiom ruleRA_is_epsilon_free :
-  forall q r q',
-  ~ In (q, epsilon, r, q') delta.
-
-(* decidability *)
-Axiom finalRA_dec : forall q : Q, {finalRA q} + {~ finalRA q}.
+(* decidability of equality in Q (deltaq depends on) *)
 Axiom Q_eq_dec : forall q1 q2 : Q, {q1 = q2} + {q1 <> q2}.
 
 Fixpoint restrict_rules (ls : list ruleRAt) (q : Q) :=
@@ -58,20 +53,25 @@ Fixpoint restrict_rules (ls : list ruleRAt) (q : Q) :=
   end.
 Definition deltaq := restrict_rules delta.
 
-(* Conversion of RA into an eqnSys *)
+(* assumptions *)
+
+Axiom ruleRA_is_epsilon_free :
+  forall q r q',
+  ~ In (q, epsilon, r, q') delta.
+
+(* decidability of whether finalRA or not *)
+Axiom finalRA_dec : forall q : Q, {finalRA q} + {~ finalRA q}.
+
+(*** Conversion of RA into an eqnSys ***)
+
+(* object-to-variable functions *)
 
 Parameter QVar  : Q -> V.
 Parameter QDVar : (list ruleRAt) -> V.
 Parameter RVar  : ruleRAt -> V.
 Parameter Vend  : V.
 
-Axiom QDVar_is_injective :
-  forall l1 l2, QDVar l1 = QDVar l2 -> l1 = l2.
-
-Axiom RVar_is_not_Vend  : forall r, RVar r <> Vend.
-Axiom QDVar_is_not_Vend : forall l, QDVar l <> Vend.
-Axiom RVar_is_not_QDVar : forall r l, RVar r <> QDVar l.
-
+(* rules for defining equations *)
 
 Parameter sigmaRA : eqn_sys.
 
@@ -110,12 +110,21 @@ Axiom sigmaRA_q_final :
     (var Vend .\/ var (QDVar (deltaq q))) /\
   disjunction_of_succ (deltaq q).
 
+(* assumptions *)
+
+Axiom RVar_is_not_Vend  : forall r, RVar r <> Vend.
+Axiom QDVar_is_not_Vend : forall l, QDVar l <> Vend.
+Axiom RVar_is_not_QDVar : forall r l, RVar r <> QDVar l.
+
+Axiom QDVar_is_injective :
+  forall l1 l2, QDVar l1 = QDVar l2 -> l1 = l2.
+
 Axiom sigmaRA_QVar_dec :
   forall q',
   {exists q, q' = (sigmaRA (QVar q))} +
   {forall q, q' <> (sigmaRA (QVar q))}.
 
-(* utilities *)
+(*** Properties on RA ***)
 
 Lemma delta_and_deltaq_nonnil :
   forall q a r q',
@@ -226,14 +235,29 @@ Proof.
   now left.
 Qed.
 
-Lemma q_disjunction_of_succ :
-  forall q : Q, disjunction_of_succ (deltaq q).
+Lemma deltaq_is_injective :
+  forall q q',
+  deltaq q = deltaq q' ->
+  deltaq q = nil \/ q = q'.
 Proof.
-  intros q.
-  destruct (finalRA_dec q) as [Hfq | Hnfq].
-  - now destruct (sigmaRA_q_final q Hfq).
-  - now destruct (sigmaRA_q_not_final q Hnfq).
+  intros q q'.
+  remember (deltaq q) as dq.
+  destruct dq as [| r t].
+  - intros. now left.
+  - destruct r as [[[q1 a] rg] q2].
+  intros Hq'.
+  symmetry in Heqdq.
+  symmetry in Hq'.
+  apply deltaq_and_q_1 in Heqdq.
+  apply deltaq_and_q_1 in Hq'.
+  rewrite <- Heqdq.
+  rewrite <- Hq'.
+  now right.
 Qed.
+
+(*** Properies of sigmaRA ***)
+
+(* range of ltls for each object *)
 
 Lemma sigmaRA_QVar :
   forall q,
@@ -286,7 +310,9 @@ Proof.
   now exists t.
 Qed.
 
-Lemma sigmaRA_QVar_neq_end :
+(* discrimination and injectivity *)
+
+Lemma sigmaRA_QVar_is_not_END :
   forall q, sigmaRA (QVar q) <> (φ [END]).
 Proof.
   intros q.
@@ -295,7 +321,7 @@ Proof.
   discriminate.
 Qed.
 
-Lemma sigmaRA_RVar_neq_end :
+Lemma sigmaRA_RVar_is_not_END :
   forall r, sigmaRA (RVar r) <> (φ [END]).
 Proof.
   intros r.
@@ -307,7 +333,7 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma sigmaRA_QDVar_neq_end :
+Lemma sigmaRA_QDVar_is_not_END :
   forall l,
   disjunction_of_succ l ->
   sigmaRA (QDVar l) <> (φ [END]).
@@ -319,7 +345,7 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma sigmaRA_QDVar_neq_QVar :
+Lemma sigmaRA_QDVar_is_not_QVar :
   forall l q,
   disjunction_of_succ l ->
   sigmaRA (QDVar l) <> sigmaRA (QVar q).
@@ -344,34 +370,13 @@ Proof.
   now apply RVar_is_not_QDVar in Hr.
 Qed.
 
-Section Injectivity.
-
-Variables q q' : Q.
-
-Lemma deltaq_is_injective :
-  deltaq q = deltaq q' ->
-  deltaq q = nil \/ q = q'.
-Proof.
-  remember (deltaq q) as dq.
-  destruct dq as [| r t].
-  - intros. now left.
-  - destruct r as [[[q1 a] rg] q2].
-  intros Hq'.
-  symmetry in Heqdq.
-  symmetry in Hq'.
-  apply deltaq_and_q_1 in Heqdq.
-  apply deltaq_and_q_1 in Hq'.
-  rewrite <- Heqdq.
-  rewrite <- Hq'.
-  now right.
-Qed.
-
 Lemma sigmaRA_QVar_is_injective :
+  forall q q',
   sigmaRA (QVar q) = sigmaRA (QVar q') ->
   (deltaq q = nil /\ deltaq q' = nil) \/
   q = q'.
 Proof.
-  intros H.
+  intros q q' H.
   destruct (finalRA_dec q) as [Hfq | Hnfq].
   - (* finalRA q -> ... *)
   destruct (sigmaRA_q_final q Hfq) as [EQsq Hd];
@@ -413,7 +418,16 @@ Proof.
   * now right.
 Qed.
 
-End Injectivity.
+(* other properties *)
+
+Lemma disjunction_of_succ_for_every_Q :
+  forall q : Q, disjunction_of_succ (deltaq q).
+Proof.
+  intros q.
+  destruct (finalRA_dec q) as [Hfq | Hnfq].
+  - now destruct (sigmaRA_q_final q Hfq).
+  - now destruct (sigmaRA_q_not_final q Hnfq).
+Qed.
 
 Lemma deltaq_and_finalRA :
   forall q1 q2,
@@ -456,7 +470,7 @@ Proof.
   now apply n_Sn in Hl.
 Qed.
 
-(* sigmaRA simulates moveRA *)
+(*** sigmaRA simulates moveRA ***)
 
 Section SigmaSimulatesRA.
 
@@ -483,7 +497,7 @@ Lemma epsilon_move_of_sigmaRA_1 :
 Proof.
   intros q phi q' theta w r Hin.
   assert (Hinq := delta_and_deltaq q (Σφ phi) reg_empty q' Hin).
-  assert (Hdq := q_disjunction_of_succ q).
+  assert (Hdq := disjunction_of_succ_for_every_Q q).
   apply moveA_star_trans
   with (sigmaRA (QDVar (deltaq q)), theta, w).
   { apply QVar_to_QDVar. }
@@ -522,7 +536,7 @@ Proof.
   intros q phi q' theta w rg.
   intros r Hin.
   assert (Hinq := delta_and_deltaq q (Σφ phi) (reg rg) q' Hin).
-  assert (Hdq := q_disjunction_of_succ q).
+  assert (Hdq := disjunction_of_succ_for_every_Q q).
   apply moveA_star_trans
   with (sigmaRA (QDVar (deltaq q)), theta, w).
   { apply QVar_to_QDVar. }
@@ -818,7 +832,7 @@ Proof.
       as [c1 c2 H12 EQc1 EQc2
          |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3]].
   - (* sigmaRA (RVar r) = φ [END] -> ... *)
-  now apply sigmaRA_RVar_neq_end in EQsr.
+  now apply sigmaRA_RVar_is_not_END in EQsr.
   - (* c2 = (φ [END], theta', nil) -> ... *)
   destruct (sigmaRA_RVar r)
   as [EQsr' | [[q [phi EQsr']] | [rg [q [phi EQsr']]]]];
@@ -866,7 +880,7 @@ Lemma QDVar_to_end_without_QVar :
     (φ [END], theta', nil).
 Proof.
   intros q theta w theta' H.
-  assert (Hd := q_disjunction_of_succ q).
+  assert (Hd := disjunction_of_succ_for_every_Q q).
 
   induction (deltaq q) as [| r t IHt];
   inversion Hd as [EQsd|r' t' EQsd Hdt [EQr' EQt']].
@@ -919,9 +933,9 @@ Proof.
       |v1 v2 [EQv1 EQv2] EQe EQr EQq2'| |];
   clear v1 EQv1 v2 EQv2 EQe EQr.
   -- (* c2 = (sigmaRA (RVar r), ...) -> ... *)
-  now apply sigmaRA_RVar_neq_end in EQq2'.
+  now apply sigmaRA_RVar_is_not_END in EQq2'.
   -- (* c2 = (sigmaRA (QDVar t), ...) -> ... *)
-  now apply sigmaRA_QDVar_neq_end in EQq2'.
+  now apply sigmaRA_QDVar_is_not_END in EQq2'.
   * (* moveA ... (sigmaRA (QDVar (r::t)), ...) c2 -> ... *)
   rewrite EQsd in H12.
   inversion H12
@@ -1019,7 +1033,7 @@ Proof.
   inversion Hr
   as [|v1 v2 [EQv1 EQv2] EQe EQr EQq2'
       |v1 v2 [EQv1 EQv2] EQe EQr EQq2' | |];
-  now apply (sigmaRA_QDVar_neq_end (deltaq q) Hd) in EQq2'.
+  now apply (sigmaRA_QDVar_is_not_END (deltaq q) Hd) in EQq2'.
   - (* more than one steps /\ moveA sigmaRA (sigmaRA (QVar q), ...) c2 -> ... *)
   destruct (finalRA_dec q) as [Hfq | Hnfq].
   + (* finalRA q -> ... *)
@@ -1370,7 +1384,7 @@ Theorem RA_simulates_sigmaRA_one_step :
 Proof.
   intros q theta w q' theta' w'.
   intros Hmo.
-  assert (Hdq := q_disjunction_of_succ q).
+  assert (Hdq := disjunction_of_succ_for_every_Q q).
   inversion Hmo
   as [c1 c2 H12 EQc1 EQc2
      |c1 c2 c3 Hc2 H12 H23 EQc1 EQc3].
@@ -1385,11 +1399,11 @@ Proof.
   as [|v1 v2 [EQv1 EQv2] EQe EQr EQq2'
       |v1 v2 [EQv1 EQv2] EQe EQr EQq2' | |];
   clear v1 EQv1 v2 EQv2 EQe EQr;
-  try now apply sigmaRA_QDVar_neq_QVar in EQq2'.
+  try now apply sigmaRA_QDVar_is_not_QVar in EQq2'.
   (* sigmaRA Vend = sigmaRA (QVar q') -> ... *)
   rewrite sigmaRA_end in EQq2'.
   symmetry in EQq2'.
-  now apply sigmaRA_QVar_neq_end in EQq2'.
+  now apply sigmaRA_QVar_is_not_END in EQq2'.
   - (* more than one move *)
   remember (deltaq q) as dq.
   destruct (sigmaRA_QVar q) as [Hsq | Hsq];
