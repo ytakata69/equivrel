@@ -415,6 +415,37 @@ Qed.
 
 End Injectivity.
 
+Lemma deltaq_and_finalRA :
+  forall q1 q2,
+  sigmaRA (QVar q1) = sigmaRA (QVar q2) ->
+  deltaq q1 = nil -> deltaq q2 = nil ->
+  (finalRA q1 <-> finalRA q2).
+Proof.
+  intros q1 q2 Hsq dq1 dq2.
+  split.
+  - intros fq1.
+  destruct (sigmaRA_q_final q1 fq1) as [Hsq1 _].
+  destruct (finalRA_dec q2) as [| nfq2];
+  auto.
+  destruct (sigmaRA_q_not_final q2 nfq2) as [Hsq2 _].
+  rewrite Hsq1 in Hsq.
+  rewrite Hsq2 in Hsq.
+  injection Hsq.
+  intros _ He.
+  symmetry in He.
+  now apply QDVar_is_not_Vend in He.
+  - intros fq2.
+  destruct (sigmaRA_q_final q2 fq2) as [Hsq2 _].
+  destruct (finalRA_dec q1) as [ | nfq1];
+  auto.
+  destruct (sigmaRA_q_not_final q1 nfq1) as [Hsq1 _].
+  rewrite Hsq1 in Hsq.
+  rewrite Hsq2 in Hsq.
+  injection Hsq.
+  intros _ He.
+  now apply QDVar_is_not_Vend in He.
+Qed.
+
 Lemma neq_to_cons_self {A : Type} :
   forall (a : A) (t : list A), t <> a :: t.
 Proof.
@@ -704,56 +735,71 @@ Inductive moveA_star_without_QVar
     moveA_star_without_QVar c1 c2
   .
 
-Lemma moveA_star_can_be_split_at_QVar :
-  forall c1 c3,
-  moveA_star sigmaRA c1 c3 ->
-  moveA_star_without_QVar c1 c3 \/
-  exists c2,
+(* for induction on the number of visiting QVar *)
+Inductive moveA_star_split_at_QVar
+  : Config -> Config -> Prop :=
+  | moveA_star_split_at_QVar_step :
+    forall c1 c2,
+    moveA_star_without_QVar c1 c2 ->
+    moveA_star_split_at_QVar c1 c2
+  | moveA_star_split_at_QVar_trans :
+    forall c1 c2 c3,
+    moveA_plus_without_QVar c1 c2 ->
     (exists q, match c2 with (q2, _, _) =>
-               q2 = (sigmaRA (QVar q)) end) /\
-    moveA_plus_without_QVar c1 c2 /\
-    moveA_star sigmaRA c2 c3.
+               q2 = (sigmaRA (QVar q)) end) ->
+    moveA_star_split_at_QVar c2 c3 ->
+    moveA_star_split_at_QVar c1 c3
+  .
+
+Lemma moveA_star_is_moveA_star_split_at_QVar :
+  forall c1 c2,
+  moveA_star sigmaRA c1 c2 <->
+  moveA_star_split_at_QVar c1 c2.
 Proof.
-  intros c1 c3 Hmo.
-  induction Hmo as [c1 | c1 c2 c3 H12 H23 IH].
-  - (* zero step *)
-  left. apply moveA_star_without_QVar_ref.
-  - (* one or more steps *)
-  destruct IH as [IH | [c2' [IH1 [IH2 IH3]]]].
-  + (* moveA_star_without_QVar c2 c3 -> ... *)
-  destruct c2 as [[q2 th] w'].
-  destruct (sigmaRA_QVar_dec q2) as [[q Hq2] | Hq2].
-  * (* q2 = sigmaRA (QVar q) -> ... *)
-  right.
-  exists (q2, th, w').
-  split; [| split]; auto.
-  -- now exists q.
-  -- now apply moveA_plus_without_QVar_step.
-  * (* (forall q, q2 <> sigmaRA (QVar q)) -> ... *)
-  left.
-  inversion IH as [c3' EQc3' EQc3| c2 c3' IH' EQc2 EQc3];
-  apply moveA_star_without_QVar_plus.
-  -- now apply moveA_plus_without_QVar_step.
-  -- apply moveA_plus_without_QVar_trans
-  with (q2, th, w'); auto.
-  + (* exists c2', moveA_star_without_QVar c2 c2' /\ ... -> ... *)
-  destruct c2 as [[q2 th] w'].
-  destruct (sigmaRA_QVar_dec q2) as [[q Hq2] | Hq2].
-  * (* q2 = sigmaRA (QVar q) -> ... *)
-  right.
-  exists (q2, th, w').
-  split; [| split]; auto.
-  -- now exists q.
-  -- now apply moveA_plus_without_QVar_step.
-  * (* (forall q, q2 <> sigmaRA (QVar q)) -> ... *)
-  right.
-  exists c2'.
-  split; [| split]; auto.
-  inversion IH2
-  as [c2'' c2 H23' EQc2'' EQc2
-     |c2'' c2 c3' Hc2 H23' H23'' EQc2 EQc3];
-  apply moveA_plus_without_QVar_trans
-  with (q2, th, w'); auto.
+  intros c1 c2.
+  split; intros H.
+  - (* -> *)
+  induction H as [| c1 c2 c3 H12 H23 IH].
+  + (* moveA_star_split_at_QVar q1 q1 *)
+  apply moveA_star_split_at_QVar_step.
+  apply moveA_star_without_QVar_ref.
+  + (* moveA sigmaRA c1 c2 -> moveA_star sigmaRA c2 c3 -> ... *)
+  destruct c2 as [[q2 th] w].  (* c2 = (q2, th, w) *)
+  destruct (sigmaRA_QVar_dec q2) as [Hq2 | Hq2].
+  * (* exists q, q2 = sigmaRA (QVar q) -> ... *)
+  apply moveA_star_split_at_QVar_trans with (q2, th, w);
+  try apply moveA_plus_without_QVar_step;
+  auto.
+  * (* forall q, q2 <> sigmaRA (QVar q) -> ... *)
+  inversion IH as [c2 c3' IH' EQc2 EQc3'|c2 c2' c3'].
+  -- clear c2 EQc2 c3' EQc3'.
+  apply moveA_star_split_at_QVar_step.
+  inversion IH' as [c2 EQc2 EQc3|c2 c3' IH'' EQc2 EQc3'].
+  ++ apply moveA_star_without_QVar_plus.
+  now apply moveA_plus_without_QVar_step.
+  ++ apply moveA_star_without_QVar_plus.
+  apply moveA_plus_without_QVar_trans with (q2, th, w);
+  auto.
+  -- apply moveA_star_split_at_QVar_trans with c2';
+  try apply moveA_plus_without_QVar_trans with (q2, th, w);
+  auto.
+  - (* <- *)
+  assert (L : forall c1 c2,
+    moveA_plus_without_QVar c1 c2 ->
+    moveA_star sigmaRA c1 c2).
+  {
+  clear c1 c2 H.
+  intros c1 c2 Hp.
+  induction Hp as [c1 c2 Hp|c1 c2 c3 Hc2 H12 H23 IH].
+  -- apply moveA_star_trans with c2; auto.
+  apply moveA_star_ref.
+  -- apply moveA_star_trans with c2; auto.
+  }
+  induction H as [c1 c2 H|c1 c2 c3 H12 Hc2 H23 IH].
+  + inversion H as [c1' EQc1' EQc1|c1' c2' Hp EQc1' EQc2'].
+  * apply moveA_star_ref.
+  * apply L; auto.
+  + apply moveA_star_is_transitive with c2; auto.
 Qed.
 
 (* Simulate final step *)
@@ -1006,6 +1052,105 @@ Proof.
   rewrite <- EQq2 in H23;
   apply moveA_star_without_QVar_plus in H23;
   now apply QDVar_to_end_without_QVar in H23.
+Qed.
+
+Lemma dead_end_QVar_to_end :
+  forall q theta w theta',
+  deltaq q = nil ->
+  moveA_star sigmaRA
+    (sigmaRA (QVar q), theta, w) (φ [END], theta', nil) ->
+  finalRA q /\ theta = theta' /\ w = nil.
+Proof.
+  intros q theta w theta' dq Hm.
+  inversion Hm
+  as [c1 EQc1 [EQsq EQth EQw]|c1 c2 c3 H12 H23 EQc1 EQc3].
+  - destruct (sigmaRA_QVar q) as [Hsq | Hsq];
+  rewrite Hsq in EQsq; discriminate.
+  - destruct (finalRA_dec q) as [fq | nfq].
+  + destruct (sigmaRA_q_final q fq) as [Hsq Hdq].
+  rewrite Hsq in H12.
+  inversion H12
+  as [q1 q2 th w' Hr [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi th h t Hr
+     |q1 q2 phi rg th h t Hr];
+  inversion Hr
+  as [|v1 v2 [EQv1 EQv2] EQe EQr EQq2'
+      |v1 v2 [EQv1 EQv2] EQe EQr EQq2'| |];
+  rewrite <- EQq2' in EQq2;
+  rewrite <- EQq2 in H23;
+  clear v1 v2 EQv1 EQv2 EQe EQr EQq2';
+  clear q1 q2 EQq1 EQq2 Hr th EQth w' EQw'.
+  * rewrite sigmaRA_end in H23.
+  inversion H23
+  as [c1' EQc1' [EQth EQw]|c1' c2' c3' H1'2' H2'3 EQc1' EQc3'].
+  -- split; [| split]; auto.
+  -- inversion H1'2'
+  as [q1 q2 th w' Hr
+     |q1 q2 phi th h t Hr Hphi
+     |q1 q2 phi r th h t Hr];
+  inversion Hr
+  as [phi' EQphi' EQphi| | | |].
+  rewrite <- EQphi in Hphi.
+  unfold models_phi in Hphi.
+  now unfold models_atom in Hphi.
+  * rewrite dq in H23.
+  rewrite dq in Hdq.
+  inversion Hdq as [EQsd|].
+  rewrite EQsd in H23.
+  inversion H23
+  as [|c1' c2' c3' H1'2' H2'3 EQc1' EQc3'].
+  inversion H1'2'
+  as [q1 q2 th w' Hr
+     |q1 q2 phi th h t Hr Hphi
+     |q1 q2 phi r th h t Hr];
+  inversion Hr
+  as [phi' EQphi' EQphi| | | |].
+  rewrite <- EQphi in Hphi.
+  unfold models_phi in Hphi.
+  now unfold models_atom in Hphi.
+  + destruct (sigmaRA_q_not_final q nfq) as [Hsq Hdq].
+  rewrite Hsq in H12.
+  inversion H12
+  as [q1 q2 th w' Hr [EQq1 EQth EQw'] EQq2
+     |q1 q2 phi th h t Hr
+     |q1 q2 phi rg th h t Hr];
+  inversion Hr
+  as [|v1 v2 [EQv1 EQv2] EQe EQr EQq2'
+      |v1 v2 [EQv1 EQv2] EQe EQr EQq2'| |];
+  rewrite <- EQq2' in EQq2;
+  rewrite <- EQq2 in H23;
+  clear v1 v2 EQv1 EQv2 EQe EQr EQq2';
+  clear q1 q2 EQq1 EQq2 Hr th EQth w' EQw'.
+  * rewrite dq in H23.
+  rewrite dq in Hdq.
+  inversion Hdq as [EQsd|].
+  rewrite EQsd in H23.
+  inversion H23
+  as [|c1' c2' c3' H1'2' H2'3 EQc1' EQc3'].
+  inversion H1'2'
+  as [q1 q2 th w' Hr
+     |q1 q2 phi th h t Hr Hphi
+     |q1 q2 phi r th h t Hr];
+  inversion Hr
+  as [phi' EQphi' EQphi| | | |].
+  rewrite <- EQphi in Hphi.
+  unfold models_phi in Hphi.
+  now unfold models_atom in Hphi.
+  * rewrite dq in H23.
+  rewrite dq in Hdq.
+  inversion Hdq as [EQsd|].
+  rewrite EQsd in H23.
+  inversion H23
+  as [|c1' c2' c3' H1'2' H2'3 EQc1' EQc3'].
+  inversion H1'2'
+  as [q1 q2 th w' Hr
+     |q1 q2 phi th h t Hr Hphi
+     |q1 q2 phi r th h t Hr];
+  inversion Hr
+  as [phi' EQphi' EQphi| | | |].
+  rewrite <- EQphi in Hphi.
+  unfold models_phi in Hphi.
+  now unfold models_atom in Hphi.
 Qed.
 
 (* Simulate one middle step *)
@@ -1288,6 +1433,68 @@ Proof.
   try now apply QDVar_nil_to_QVar in H23.
   apply (QDVar_to_QVar_one_step q r dq); auto.
   rewrite Heqdq; apply incl_Forall_in_iff; apply incl_refl.
+Qed.
+
+Theorem RA_simulates_sigmaRA :
+  forall q theta w theta',
+  moveA_star sigmaRA
+    (sigmaRA (QVar q), theta, w) (φ [END], theta', nil) ->
+  (exists qF,
+   finalRA qF /\
+   moveRA_star (q, theta, w) (qF, theta', nil)).
+Proof.
+  intros q theta w theta' Hmo.
+  apply moveA_star_is_moveA_star_split_at_QVar in Hmo.
+  remember (sigmaRA (QVar q), theta, w) as c1.
+  remember (φ [END], theta', nil) as c2.
+  generalize dependent w.
+  generalize dependent theta.
+  generalize dependent q.
+  induction Hmo
+  as [c1 c2 H|c1 c2 c3 H12 Hq H23 IH];
+  intros q theta w Heqc1.
+  - (* moveA_star_without_QVar c1 c2 -> ... *)
+  rewrite Heqc1 in H.
+  rewrite Heqc2 in H.
+  apply RA_simulates_sigmaRA_end in H.
+  destruct H as [Hfin [Hth Hw]].
+  rewrite Hth.
+  rewrite Hw.
+  exists q.
+  split; try apply moveRA_star_ref; auto.
+  - (* moveA_plus_without_QVar c1 c2 /\ moveA_star_split_at_QVar c2 c3 -> ... *)
+  destruct Hq as [q2 Hq2].
+  destruct c2 as [[q2' th2] w2].
+  rewrite Hq2 in H12.
+  rewrite Heqc1 in H12.
+  apply RA_simulates_sigmaRA_one_step in H12.
+  assert (H : (q2', th2, w2) = (sigmaRA (QVar q2), th2, w2)).
+  { now rewrite Hq2. }
+  assert (IH' := IH Heqc2 q2 th2 w2 H).
+  rewrite Hq2 in H23.
+  clear IH H q2' Hq2.
+  destruct H12 as [q2' [Hq2 H12']].
+  apply sigmaRA_QVar_is_injective in Hq2 as Hq2'.
+  destruct Hq2' as [[dq2nil dq2'nil] | EQq2].
+  + (* deltaq q2 = deltaq q2' = nil -> ... *)
+  rewrite Heqc2 in H23.
+  apply moveA_star_is_moveA_star_split_at_QVar in H23.
+  apply (dead_end_QVar_to_end q2 _ _ _ dq2nil) in H23.
+  destruct H23 as [Hfq2 [EQth2 EQw2]].
+  rewrite EQth2 in H12'.
+  rewrite EQw2 in H12'.
+  assert (Hfq2' := deltaq_and_finalRA q2 q2' Hq2 dq2nil dq2'nil).
+  apply Hfq2' in Hfq2.
+  exists q2'.
+  split; auto.
+  apply moveRA_star_trans with (q2', theta', nil);
+  try apply moveRA_star_ref; auto.
+  + (* q2 = q2' -> ... *)
+  rewrite <- EQq2 in H12'.
+  destruct IH' as [qF [HqF H2F]].
+  exists qF.
+  split; auto.
+  apply moveRA_star_trans with (q2, th2, w2); auto.
 Qed.
 
 End RASimulatesSigma.
