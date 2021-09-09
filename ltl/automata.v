@@ -1,5 +1,7 @@
-Require Import mu.
+Require Import ltl.
 Require Import eqnSys.
+
+(* The set of normalized LTL formulas *)
 
 Inductive ra_ltl : ltl -> Prop :=
   | ra_ltl_OR :
@@ -15,6 +17,8 @@ Inductive ra_ltl : ltl -> Prop :=
       forall (phi : ltl_phi),
       ra_ltl (φ phi)
   .
+
+(* Transition rules *)
 
 Inductive SigmaE :=
   | epsilon

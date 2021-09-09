@@ -1,5 +1,5 @@
 targets = raToEqnsys.vo
-srcs = mu.v eqnSys.v automata.v raToEqnsys.v
+srcs = ltl.v eqnSys.v automata.v raToEqnsys.v
 docdir = ../docs
 vobjs = $(srcs:.v=.vo)
 
@@ -10,9 +10,9 @@ vobjs = $(srcs:.v=.vo)
 default: $(targets)
 all: $(targets)
 
-raToEqnsys.vo: mu.vo eqnSys.vo automata.vo
-automata.vo: mu.vo eqnSys.vo
-eqnSys.vo: mu.vo
+raToEqnsys.vo: ltl.vo eqnSys.vo automata.vo
+automata.vo: ltl.vo eqnSys.vo
+eqnSys.vo: ltl.vo
 
 doc: $(vobjs)
 	test -d $(docdir) || mkdir $(docdir)

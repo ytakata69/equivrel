@@ -1,14 +1,15 @@
 (*
  * mu-calculus for data words (of finite length)
  *)
+
 Require Export Nat Arith.
 Require Export List.
 
 (* data words *)
 
-Definition D := nat.  (* a data domain *)
-Definition At := nat.  (* a finite set of atomic props *)
-Definition Sigma := At -> bool.  (* 2^{At} *)
+Definition D := nat.
+Definition At := nat.
+Definition Sigma := At -> bool.
 Definition data_word := list (Sigma * D)%type.
 
 (* LTL syntax *)

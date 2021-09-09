@@ -1,8 +1,13 @@
-Require Import mu.
+(*
+ * Definition & correctness of the transformation
+ * from a given RA into an equation system.
+ *)
+
+Require Import ltl.
 Require Import eqnSys.
 Require Import automata.
 
-(*** Definition of an RA ***)
+(*** Definition of an RA to be transformed ***)
 
 Parameter Q : Type.
 

@@ -1,8 +1,12 @@
-Require Import mu.
+(*
+ * Definitions & lemmas on equation systems.
+ *)
+
+Require Import ltl.
 
 (* Equation systems *)
 
-Definition eqn_sys := V -> ltl.  (* the set of equation systems *)
+Definition eqn_sys := V -> ltl.  (* the type of equation systems *)
 
 (* The transformation from Env to Env *)
 Definition F (sigma : eqn_sys) (env : Env) : Env :=
